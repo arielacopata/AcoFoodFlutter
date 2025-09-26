@@ -1,16 +1,21 @@
-# acofood2
+# 🥗 AcoFoodFlutter
 
-A new Flutter project.
+AcoFoodFlutter es la versión en Flutter de **AcoFood**, una app pensada para registrar alimentos, calcular macros y conectarse vía **Bluetooth** a la balanza inteligente **Macroscale**.
 
-## Getting Started
+## 🚀 Funcionalidades
 
-This project is a starting point for a Flutter application.
+- 📱 **Interfaz Flutter** multiplataforma (Android, iOS, Web, Desktop).
+- 🔍 **Buscador de alimentos** con macros.
+- ⚖️ **Integración con balanza Macroscale** vía `flutter_blue_plus`.
+- 📊 **Historial de consumos** con fecha, gramos y kcal.
+- 🎨 **Soporte de temas (claro/oscuro)**.
+- 🔐 **Persistencia** con `shared_preferences` y `sqflite`.
 
-A few resources to get you started if this is your first Flutter project:
+## 📂 Estructura del proyecto
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```plaintext
+lib/
+ ├── home_page.dart         # Pantalla principal
+ ├── models/                # Modelos (Food, UserProfile, FoodEntry, etc.)
+ ├── widgets/               # Widgets reutilizables (FoodAmountSheet, BluetoothManager)
+ ├── services/              # Lógica de simulador de balanza
