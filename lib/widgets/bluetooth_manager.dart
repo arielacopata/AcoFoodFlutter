@@ -1,11 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class BluetoothManager extends StatefulWidget {
   final void Function(double grams) onWeightChanged;
+  final ValueChanged<bool>? onConnectionChanged;
 
-  const BluetoothManager({super.key, required this.onWeightChanged});
+  const BluetoothManager({
+    super.key,
+    required this.onWeightChanged,
+    this.onConnectionChanged,
+  });
 
   @override
   State<BluetoothManager> createState() => _BluetoothManagerState();
@@ -14,6 +21,9 @@ class BluetoothManager extends StatefulWidget {
 class _BluetoothManagerState extends State<BluetoothManager> {
   BluetoothDevice? _connectedDevice;
   List<ScanResult> _scanResults = [];
+  StreamSubscription<List<ScanResult>>? _scanSubscription;
+  final List<StreamSubscription<List<int>>> _valueSubscriptions = [];
+  bool _isScanning = false;
 
   @override
   void initState() {
@@ -27,84 +37,215 @@ class _BluetoothManagerState extends State<BluetoothManager> {
     await Permission.locationWhenInUse.request();
   }
 
-  void _startScan() {
-    setState(() => _scanResults.clear());
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
-
-    FlutterBluePlus.scanResults.listen((results) {
-      setState(() {
-        _scanResults = results;
-      });
+  Future<void> _startScan() async {
+    await _checkPermissions();
+    setState(() {
+      _scanResults = [];
+      _isScanning = true;
     });
-  }
 
-  Future<void> _connectToDevice(BluetoothDevice device) async {
-    await device.connect(
-      timeout: const Duration(seconds: 10),
-      autoConnect: false,
-      );
+    await FlutterBluePlus.stopScan();
+    await _scanSubscription?.cancel();
 
-    setState(() => _connectedDevice = device);
+    _scanSubscription = FlutterBluePlus.scanResults.listen((results) {
+      if (!mounted) return;
+      setState(() => _scanResults = results);
+    });
 
-    final services = await device.discoverServices();
-    for (var service in services) {
-      for (var char in service.characteristics) {
-        if (char.properties.notify) {
-          await char.setNotifyValue(true);
-          char.onValueReceived.listen((value) {
-            if (value.length >= 5) {
-              int raw = (value[3] << 8) | value[4];
-              double grams = raw / 10.0;
-              widget.onWeightChanged(grams);
-            }
-          });
-        }
+    try {
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo iniciar la búsqueda: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isScanning = false);
       }
     }
   }
 
+  Future<void> _connectToDevice(BluetoothDevice device) async {
+    try {
+      await device.connect(
+        timeout: const Duration(seconds: 10),
+        autoConnect: false,
+      );
+
+      await FlutterBluePlus.stopScan();
+      await _scanSubscription?.cancel();
+
+      if (!mounted) return;
+
+      setState(() {
+        _connectedDevice = device;
+        _scanResults = [];
+        _isScanning = false;
+      });
+
+      widget.onConnectionChanged?.call(true);
+
+      final services = await device.discoverServices();
+      for (final service in services) {
+        for (final char in service.characteristics) {
+          if (char.properties.notify) {
+            await char.setNotifyValue(true);
+            final subscription = char.onValueReceived.listen((value) {
+              if (value.length >= 5) {
+                final raw = (value[3] << 8) | value[4];
+                final grams = raw / 10.0;
+                widget.onWeightChanged(grams);
+              }
+            });
+            _valueSubscriptions.add(subscription);
+          }
+        }
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo conectar: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> _disconnect() async {
+    for (final subscription in _valueSubscriptions) {
+      await subscription.cancel();
+    }
+    _valueSubscriptions.clear();
+
+    try {
+      await _connectedDevice?.disconnect();
+    } catch (error) {
+      debugPrint('Error al desconectar: $error');
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _connectedDevice = null;
+      _scanResults = [];
+    });
+    widget.onConnectionChanged?.call(false);
+  }
+
+  @override
+  void dispose() {
+    _scanSubscription?.cancel();
+    for (final subscription in _valueSubscriptions) {
+      subscription.cancel();
+    }
+    _connectedDevice?.disconnect();
+    widget.onConnectionChanged?.call(false);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (_connectedDevice == null) ...[
-          ElevatedButton(
-            onPressed: _startScan,
-            child: const Text("Buscar balanza"),
-          ),
-          ..._scanResults.map((r) => ListTile(
-                title: Text(r.device.name.isNotEmpty
-                    ? r.device.name
-                    : r.device.remoteId.toString()),
-                subtitle: Text("RSSI: ${r.rssi}"),
-                trailing: ElevatedButton(
-                  onPressed: () => _connectToDevice(r.device),
-                  child: const Text("Conectar"),
+          Row(
+            children: [
+              FilledButton.icon(
+                onPressed: _isScanning ? null : _startScan,
+                icon: const Icon(Icons.bluetooth_searching),
+                label: Text(_isScanning ? 'Buscando...' : 'Buscar balanza'),
+              ),
+              if (_isScanning) ...[
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation(colorScheme.primary),
+                  ),
                 ),
-              )),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_scanResults.isEmpty && !_isScanning)
+            Text(
+              'Tocá "Buscar balanza" para descubrir dispositivos cercanos.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.outline,
+              ),
+            ),
+          ..._scanResults.map(
+            (result) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    Icons.scale_outlined,
+                    color: colorScheme.primary,
+                  ),
+                  title: Text(
+                    result.device.name.isNotEmpty
+                        ? result.device.name
+                        : 'Balanza sin nombre',
+                  ),
+                  subtitle: Text(
+                    '${result.device.remoteId} · RSSI: ${result.rssi}',
+                  ),
+                  trailing: FilledButton.tonalIcon(
+                    icon: const Icon(Icons.link),
+                    label: const Text('Conectar'),
+                    onPressed: () => _connectToDevice(result.device),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ] else ...[
-          Text("Conectado a ${_connectedDevice!.name}",
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () async {
-              await _connectedDevice!.disconnect();
-              setState(() => _connectedDevice = null);
-            },
-            child: const Text("Desconectar"),
+          Card(
+            color: colorScheme.primaryContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: ListTile(
+              leading: Icon(
+                Icons.check_circle,
+                color: colorScheme.onPrimaryContainer,
+              ),
+              title: Text(
+                _connectedDevice!.name.isNotEmpty
+                    ? _connectedDevice!.name
+                    : _connectedDevice!.remoteId.toString(),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Conexión activa',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onPrimaryContainer.withOpacity(0.8),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _disconnect,
+            icon: const Icon(Icons.link_off),
+            label: const Text('Desconectar'),
           ),
         ],
       ],
     );
   }
-
-@override
-void dispose() {
-  try {
-    _connectedDevice?.disconnect();
-  } catch (e) {
-    debugPrint("Error al desconectar: $e");
-  }
-  super.dispose();
-}
-}

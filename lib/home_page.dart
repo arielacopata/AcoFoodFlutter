@@ -1,15 +1,14 @@
+import 'dart:async';
+
 import 'package:acofood2/models/food.dart';
 import 'package:flutter/material.dart';
-import 'services/scale_simulator.dart';
+
+import 'data/foods.dart';
+import 'models/food_entry.dart';
 import 'models/user_profile.dart';
 import 'settings_drawer.dart';
-import 'data/foods.dart';
-import 'widgets/food_amount_sheet.dart';
 import 'widgets/bluetooth_manager.dart';
-import 'dart:async';
-import 'models/food_entry.dart';
-
-final StreamController<double> _weightController = StreamController.broadcast();
+import 'widgets/food_amount_sheet.dart';
 
 class HomePage extends StatefulWidget {
   final UserProfile profile;
@@ -28,50 +27,49 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final TextEditingController _searchController = TextEditingController();
+  late final StreamController<double> _weightController;
   String _searchQuery = "";
-  // final _simulator = ScaleSimulator();
   double _weight = 0.0;
-
-List<FoodEntry> _history = [];
+  bool _isScaleConnected = false;
+  final List<FoodEntry> _history = [];
 
   @override
   void initState() {
     super.initState();
-   //simulator.start();
-   //simulator.stream.listen((w) {
-   // setState(() {
-   //   _weight = w;
-   // });
-   // });
+    // _simulator.start();
+    // _simulator.stream.listen((w) {
+    //   setState(() {
+    //     _weight = w;
+    //   });
+    // });
+    _weightController = StreamController<double>.broadcast();
   }
 
   @override
   void dispose() {
     //_simulator.dispose();
-	_weightController.close();
+    _searchController.dispose();
+    _weightController.close();
     super.dispose();
   }
 
   Future<void> _openFoodBottomSheet(Food food) async {
-    // en producciÃ³n, reemplazÃ¡ por el estado real del BLE
-    final bool isScaleConnected = true; // o false si no hay conexiÃ³n
-    final double currentWeight = _weight; // del simulador o BLE real
+    final grams = await showModalBottomSheet<double?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => FoodAmountSheet(
+        food: food,
+        isScaleConnected: _isScaleConnected,
+        weightStream: _weightController.stream,
+      ),
+    );
 
-final grams = await showModalBottomSheet<double?>(
-  context: context,
-  builder: (ctx) => FoodAmountSheet(
-    food: food,
-    isScaleConnected: true,
-    weightStream: _weightController.stream,
-  ),
-);
-
-
-if (grams != null && grams > 0) {
-  setState(() {
-    _history.add(FoodEntry(food: food, grams: grams));
-  });
-}
+    if (grams != null && grams > 0) {
+      setState(() {
+        _history.add(FoodEntry(food: food, grams: grams));
+      });
+    }
   }
 
   @override
@@ -82,12 +80,28 @@ if (grams != null && grams > 0) {
           (food.fullName?.toLowerCase().contains(query) ?? false);
     }).toList();
 
+    final materialLocalizations = MaterialLocalizations.of(context);
+    final alwaysUse24HourFormat = MediaQuery.of(context).alwaysUse24HourFormat;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("AcoFood"),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("AcoFood"),
+            Text(
+              "Tu asistente diario de macros",
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.brightness_6),
+            tooltip: 'Cambiar tema',
             onPressed: widget.onToggleTheme,
           ),
         ],
@@ -96,120 +110,336 @@ if (grams != null && grams > 0) {
         profile: widget.profile,
         onUpdateProfile: widget.onUpdateProfile,
       ),
-      body: Column(
-        children: [
-    BluetoothManager(
-    onWeightChanged: (grams) {
-    setState(() => _weight = grams);
-    _weightController.add(grams);
-  },
-),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isLarge = constraints.maxWidth >= 1200;
+          final isMedium = constraints.maxWidth >= 800;
+          final crossAxisCount = isLarge
+              ? 5
+              : isMedium
+                  ? 4
+                  : constraints.maxWidth >= 600
+                      ? 3
+                      : 2;
 
-          // ðŸ“¦ Panel de balanza
-          Card(
-            margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Text(
-                    "Balanza MACROSCALE",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ScaleOverviewCard(
+                        weight: _weight,
+                        isConnected: _isScaleConnected,
+                        onWeightChanged: (grams) {
+                          setState(() => _weight = grams);
+                          _weightController.add(grams);
+                        },
+                        onConnectionChanged: (isConnected) {
+                          setState(() => _isScaleConnected = isConnected);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 6,
+                            horizontal: 12,
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              icon: Icon(Icons.search),
+                              border: InputBorder.none,
+                              hintText: 'Buscar alimento o marca...',
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _searchQuery = value;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "${_weight.toStringAsFixed(1)} g",
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "${(_weight * 7).toStringAsFixed(0)} kcal",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.orange.shade700,
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-
-          // ðŸ“¦ Grid de alimentos
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    'Cat¨¢logo',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
               ),
-              itemCount: filteredFoods.length,
-              itemBuilder: (context, index) {
-                final food = filteredFoods[index];
-                return InkWell(
-                  onTap: () => _openFoodBottomSheet(food),
-                  child: Card(
+              if (filteredFoods.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                     child: Center(
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            food.emoji,
-                            style: const TextStyle(fontSize: 28),
+                          Icon(
+                            Icons.search_off,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.outline,
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 12),
                           Text(
-                            food.name,
+                            'No encontramos alimentos para "$_searchQuery"',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: Theme.of(context).textTheme.bodyMedium,
                           ),
                         ],
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-            // ðŸ“œ historial
-          Expanded(
-          child: ListView.builder(
-            itemCount: _history.length,
-            itemBuilder: (context, index) {
-              final entry = _history[index];
-              return ListTile(
-                leading: const Icon(Icons.restaurant_menu),
-                title: Text("${entry.food.name} - ${entry.grams.toStringAsFixed(1)} g"),
-                subtitle: Text(entry.timestamp.toLocal().toString()),
-              );
-            },
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverGrid.builder(
+                    itemCount: filteredFoods.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: isLarge
+                          ? 1.1
+                          : isMedium
+                              ? 1
+                              : 0.95,
+                    ),
+                    itemBuilder: (context, index) {
+                      final food = filteredFoods[index];
+                      return _FoodCard(
+                        food: food,
+                        onTap: () => _openFoodBottomSheet(food),
+                      );
+                    },
+                  ),
+                ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    'Historial reciente',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ),
+              ),
+              if (_history.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Text(
+                      'Todav¨ªa no registraste comidas. Usa el cat¨¢logo para agregar tu primera entrada.',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(color: Theme.of(context).colorScheme.outline),
+                    ),
+                  ),
+                )
+              else
+                SliverList.builder(
+                  itemCount: _history.length,
+                  itemBuilder: (context, index) {
+                    final entry = _history[index];
+                    final localDate = entry.timestamp.toLocal();
+                    final dateLabel = materialLocalizations.formatShortDate(localDate);
+                    final timeLabel = materialLocalizations.formatTimeOfDay(
+                      TimeOfDay.fromDateTime(localDate),
+                      alwaysUse24HourFormat: alwaysUse24HourFormat,
+                    );
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        elevation: 0,
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            child: Text(entry.food.emoji),
+                          ),
+                          title: Text(
+                            '${entry.food.name} ¡¤ ${entry.grams.toStringAsFixed(1)} g',
+                          ),
+                          subtitle: Text('$dateLabel ¡¤ $timeLabel'),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FoodCard extends StatelessWidget {
+  final Food food;
+  final VoidCallback onTap;
+
+  const _FoodCard({required this.food, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                food.emoji,
+                style: theme.textTheme.displaySmall,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                food.name,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (food.fullName != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  food.fullName!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
           ),
         ),
-          // ðŸ“¦ Buscador
-          Container(
-            margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              border: Border.all(color: Theme.of(context).dividerColor),
-              borderRadius: BorderRadius.circular(16),
+      ),
+    );
+  }
+}
+
+class _ScaleOverviewCard extends StatelessWidget {
+  final double weight;
+  final bool isConnected;
+  final ValueChanged<double> onWeightChanged;
+  final ValueChanged<bool> onConnectionChanged;
+
+  const _ScaleOverviewCard({
+    required this.weight,
+    required this.isConnected,
+    required this.onWeightChanged,
+    required this.onConnectionChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final calories = (weight * 7).clamp(0, double.infinity);
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: colorScheme.primaryContainer,
+                  child: Icon(
+                    Icons.scale_rounded,
+                    size: 30,
+                    color: colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Balanza MacroScale',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isConnected
+                            ? 'Listo para capturar tu pr¨®xima porci¨®n'
+                            : 'Conect¨¢ tu balanza para registrar lecturas en vivo',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${weight.toStringAsFixed(1)} g',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${calories.toStringAsFixed(0)} kcal aprox.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.tertiary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: "ðŸ”Ž Buscar alimento...",
-                border: InputBorder.none,
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
+            const SizedBox(height: 20),
+            BluetoothManager(
+              onWeightChanged: onWeightChanged,
+              onConnectionChanged: onConnectionChanged,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
