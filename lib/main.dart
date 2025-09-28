@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 import 'models/user_profile.dart';
 import 'services/preferences_service.dart';
 import 'home_page.dart';
+import 'services/food_repository.dart'; // <-- 1. Importa el repositorio
 
-void main() {
+void main() async {
+  // <-- 2. Conviértelo en async
+  // Asegúrate de que los bindings de Flutter estén inicializados
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // <-- 3. Carga los alimentos antes de correr la app
+  await FoodRepository().loadFoods();
+
   runApp(const AcoFoodApp());
 }
 

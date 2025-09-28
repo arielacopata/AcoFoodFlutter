@@ -18,7 +18,7 @@ class BluetoothManager extends StatefulWidget {
 
 class _BluetoothManagerState extends State<BluetoothManager> {
   BluetoothDevice? _connectedDevice;
-  List<ScanResult> _scanResults = [];
+  final List<ScanResult> _scanResults = [];
 
   @override
   void initState() {
@@ -78,10 +78,7 @@ class _BluetoothManagerState extends State<BluetoothManager> {
     return Column(
       children: [
         if (_connectedDevice == null) ...[
-          ElevatedButton(
-            onPressed: _startScan,
-            child: const Text("Conectar"),
-          ),
+          ElevatedButton(onPressed: _startScan, child: const Text("Conectar")),
           ..._scanResults.map(
             (r) => ListTile(
               title: Text(
@@ -101,7 +98,7 @@ class _BluetoothManagerState extends State<BluetoothManager> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "${_connectedDevice!.platformName}",
+                _connectedDevice!.platformName,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 22,
