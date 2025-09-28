@@ -8,8 +8,11 @@ import 'widgets/food_amount_sheet.dart';
 import 'widgets/bluetooth_manager.dart';
 import 'dart:async';
 import 'models/food_entry.dart';
+import 'models/food_group.dart';
+import 'data/food_groups.dart';
 
 final StreamController<double> _weightController = StreamController.broadcast();
+bool _isScaleConnected = false; // Agregar esta variable
 
 class HomePage extends StatefulWidget {
   final UserProfile profile;
@@ -31,7 +34,9 @@ class _HomePageState extends State<HomePage> {
   String _searchQuery = "";
   double _weight = 0.0;
   double _tareWeight = 0.0;
-  
+  bool _scaleExpanded = false;
+  bool _isSearchFocused = false;
+final FocusNode _searchFocusNode = FocusNode(); // <-- Agrega esto
   // Peso neto (siempre positivo para tu caso de uso)
   double get _netWeight => (_weight - _tareWeight).abs();
 
@@ -45,6 +50,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _weightController.close();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -67,12 +73,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openFoodBottomSheet(Food food) async {
+    _searchFocusNode.unfocus();
     final grams = await showModalBottomSheet<double?>(
       context: context,
       builder: (ctx) => FoodAmountSheet(
         food: food,
         isScaleConnected: true,
-        weightStream: _weightController.stream.map((w) => (w - _tareWeight).abs()),
+        weightStream: _weightController.stream.map(
+          (w) => (w - _tareWeight).abs(),
+        ),
       ),
     );
 
@@ -83,15 +92,56 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final filteredFoods = foods.where((food) {
-      final query = _searchQuery.toLowerCase();
-      return food.name.toLowerCase().contains(query) ||
-          (food.fullName?.toLowerCase().contains(query) ?? false);
-    }).toList();
+  Future<void> _showVariantDialog(FoodGroupDisplay group) async {
+    final selected = await showDialog<Food>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Elige tipo de ${group.groupName}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: group.items
+              .map(
+                (food) => ListTile(
+                  title: Text(food.name),
+                  onTap: () => Navigator.pop(ctx, food),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
 
-    return Scaffold(
+    if (selected != null) {
+      _openFoodBottomSheet(selected);
+    }
+  }
+
+@override
+Widget build(BuildContext context) {
+  final filteredGroups = _searchQuery.isEmpty
+      ? foodGroups // Sin bÃºsqueda, mostrar todo normal
+      : foodGroups.map((group) {
+          final query = _searchQuery.toLowerCase();
+          
+          // Filtrar solo los items que coinciden
+          final matchingItems = group.items.where((food) =>
+            food.name.toLowerCase().contains(query) ||
+            (food.fullName?.toLowerCase().contains(query) ?? false)
+          ).toList();
+          
+          return FoodGroupDisplay(
+            groupName: group.groupName,
+            emoji: group.emoji,
+            items: matchingItems,
+          );
+        }).where((group) => group.items.isNotEmpty).toList();
+    return GestureDetector(
+    onTap: () {
+      if (_searchFocusNode.hasFocus) {
+        _searchFocusNode.unfocus();
+      }
+    }, // Solo grupos con resultados
+    child: Scaffold(
       appBar: AppBar(
         title: const Text("AcoFood"),
         actions: [
@@ -107,84 +157,102 @@ class _HomePageState extends State<HomePage> {
       ),
       body: Column(
         children: [
-          BluetoothManager(
-            onWeightChanged: (grams) {
-              setState(() => _weight = grams);
-              _weightController.add(grams);
-            },
-          ),
-
-          // Panel de balanza con TARA
+          
+          // Panel de balanza colapsable
           Card(
             margin: const EdgeInsets.all(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
+            child: Column(
+              children: [
+                // Header siempre visible
+                InkWell(
+                  onTap: () => setState(() => _scaleExpanded = !_scaleExpanded),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                  if (!_isScaleConnected) // Solo mostrar cuando NO estÃ¡ conectada
                   const Text(
-                    "Balanza MACROSCALE",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Peso bruto (gris si hay tara activa)
-                  if (_tareWeight > 0)
-                    Text(
-                      "Bruto: ${_weight.toStringAsFixed(1)} g",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  
-                  // Peso neto (principal)
-                  Text(
-                    "${_netWeight.toStringAsFixed(1)} g",
-                    style: TextStyle(
-                      fontSize: _tareWeight > 0 ? 32 : 32,
-                      fontWeight: FontWeight.bold,
-                      color: _tareWeight > 0 ? Colors.green : null,
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 4),
-                  Text(
-                    "${(_netWeight * 7).toStringAsFixed(0)} kcal",
+                    'Balanza',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  
-                  const SizedBox(height: 12),
-                  
-                  // Botones de tara
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      OutlinedButton.icon(
-                        onPressed: _weight > 0 ? _setTare : null,
-                        icon: const Icon(Icons.exposure_zero, size: 18),
-                        label: Text(_tareWeight > 0 
-                            ? 'TARA (${_tareWeight.toStringAsFixed(0)}g)' 
-                            : 'TARA'),
-                      ),
-                      if (_tareWeight > 0) ...[
+                const Spacer(),
+    
+                    BluetoothManager(
+                      onWeightChanged: (grams) {
+                        setState(() => _weight = grams);
+                        _weightController.add(grams);
+                      },
+                      onConnectionChanged: (isConnected) {
+                        setState(() => _isScaleConnected = isConnected);
+                      },
+        ),
+                        // Botón TARA/RESET
+                        if (_tareWeight == 0)
+                          OutlinedButton.icon(
+                            onPressed: _weight > 0 ? _setTare : null,
+                            icon: const Icon(Icons.exposure_zero, size: 18),
+                            label: const Text('TARA'),
+                          )
+                        else
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _resetTare,
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text('RESET'),
+                              ),
+                            ],
+                          ),
                         const SizedBox(width: 8),
-                        TextButton.icon(
-                          onPressed: _resetTare,
-                          icon: const Icon(Icons.refresh, size: 16),
-                          label: const Text('Reset'),
+                        Icon(
+                          _scaleExpanded
+                              ? Icons.expand_less
+                              : Icons.expand_more,
                         ),
                       ],
-                    ],
+                    ),
+                  ),
+                ),
+
+                // Contenido expandible
+                if (_scaleExpanded) ...[
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // Peso bruto (si hay tara)
+                        if (_tareWeight > 0)
+                          Text(
+                            "Bruto: ${_weight.toStringAsFixed(1)} g",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+
+                        // Peso neto
+                        Text(
+                          "${_netWeight.toStringAsFixed(1)} g",
+                          style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: _tareWeight > 0 ? Colors.green : null,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
 
-          // Grid de alimentos
+         // Grid de alimentos
           Expanded(
             child: GridView.builder(
               padding: const EdgeInsets.all(16),
@@ -193,74 +261,136 @@ class _HomePageState extends State<HomePage> {
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
               ),
-              itemCount: filteredFoods.length,
+              // Mostrar items individuales si hay búsqueda, grupos si no hay
+              itemCount: _searchQuery.isEmpty 
+                  ? filteredGroups.length 
+                  : filteredGroups.expand((g) => g.items).length,
               itemBuilder: (context, index) {
-                final food = filteredFoods[index];
-                return InkWell(
-                  onTap: () => _openFoodBottomSheet(food),
-                  child: Card(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            food.emoji,
-                            style: const TextStyle(fontSize: 28),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            food.name,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                if (_searchQuery.isEmpty) {
+                  // Modo normal: mostrar grupos
+                  final group = filteredGroups[index];
+                  return InkWell(
+                    onTap: () {
+                      if (group.hasMultiple) {
+                        _showVariantDialog(group);
+                      } else {
+                        _openFoodBottomSheet(group.items.first);
+                      }
+                    },
+                    child: Card(
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(group.emoji, style: const TextStyle(fontSize: 28)),
+                            const SizedBox(height: 6),
+                            Text(
+                              group.groupName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  // Modo búsqueda: mostrar items individuales
+                  final allItems = filteredGroups.expand((g) => g.items).toList();
+                  final food = allItems[index];
+                  return InkWell(
+                    onTap: () => _openFoodBottomSheet(food),
+                    child: Card(
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(food.emoji ?? "🍽️", style: const TextStyle(fontSize: 28)),
+                            const SizedBox(height: 6),
+                            Text(
+                              food.name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
               },
             ),
           ),
-          
-          // Historial
-          Expanded(
-            child: ListView.builder(
-              itemCount: _history.length,
-              itemBuilder: (context, index) {
-                final entry = _history[index];
-                return ListTile(
-                  leading: const Icon(Icons.restaurant_menu),
-                  title: Text("${entry.food.name} - ${entry.grams.toStringAsFixed(1)} g"),
-                  subtitle: Text(entry.timestamp.toLocal().toString()),
-                );
-              },
-            ),
+
+          // Historial colapsable
+          ExpansionTile(
+            initiallyExpanded: false,
+            leading: const Icon(Icons.history),
+            title: Text('Historial (${_history.length} registros)'),
+            children: [
+              Container(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _history.length,
+                  itemBuilder: (context, index) {
+                    final entry = _history[index];
+                    return ListTile(
+                      leading: const Icon(Icons.restaurant_menu),
+                      title: Text(
+                        "${entry.food.name} - ${entry.grams.toStringAsFixed(1)} g",
+                      ),
+                      subtitle: Text(entry.timestamp.toLocal().toString()),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-          
           // Buscador
           Container(
             margin: const EdgeInsets.all(12),
-            padding: const EdgeInsets.all(12),
+            padding: EdgeInsets.all(_isSearchFocused ? 12 : 8),
             decoration: BoxDecoration(
               color: Theme.of(context).cardColor,
-              border: Border.all(color: Theme.of(context).dividerColor),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: "Buscar alimento...",
-                border: InputBorder.none,
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (value) {
+            child: Focus(
+              onFocusChange: (hasFocus) {
                 setState(() {
-                  _searchQuery = value;
+                  _isSearchFocused = hasFocus;
                 });
               },
+              child: TextField(
+                focusNode: _searchFocusNode,
+                textCapitalization: TextCapitalization.characters,
+                textAlign: TextAlign.left,
+                style: TextStyle(fontSize: _isSearchFocused ? 22 : 16),
+                decoration: InputDecoration(
+                  hintText: 'BUSCAR ALIMENTO...',
+                  hintStyle: TextStyle(
+                    fontSize: _isSearchFocused ? 22 : 16,
+                    color: Colors.grey[400]
+                  ),
+                  prefixIcon: Icon(Icons.search, size: _isSearchFocused ? 24 : 20),
+                  contentPadding: EdgeInsets.symmetric(
+                    vertical: _isSearchFocused ? 24 : 15,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+ }
 }

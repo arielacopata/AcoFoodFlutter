@@ -14,7 +14,7 @@ class FoodAmountSheet extends StatefulWidget {
   });
 
   @override
-   State<FoodAmountSheet> createState() => _FoodAmountSheetState();
+  State<FoodAmountSheet> createState() => _FoodAmountSheetState();
 }
 
 class _FoodAmountSheetState extends State<FoodAmountSheet> {
@@ -42,7 +42,7 @@ class _FoodAmountSheetState extends State<FoodAmountSheet> {
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.of(context).viewInsets;
-//    final weightText = "${widget.currentWeight.toStringAsFixed(1)} g";
+    //    final weightText = "${widget.currentWeight.toStringAsFixed(1)} g";
 
     return Padding(
       padding: EdgeInsets.only(bottom: padding.bottom),
@@ -91,9 +91,7 @@ class _FoodAmountSheetState extends State<FoodAmountSheet> {
                         selected: selected,
                         onSelected: (_) {
                           setState(() {
-                            _selectedPreset = selected ? null : p;
-                            _customCtrl.clear();
-                            _error = null;
+                            Navigator.pop(context, p.toDouble());
                           });
                         },
                       );
@@ -133,51 +131,57 @@ class _FoodAmountSheetState extends State<FoodAmountSheet> {
                 const SizedBox(height: 16),
 
                 // Balanza (solo si hay conexión)
-if (widget.isScaleConnected && widget.weightStream != null) ...[
-  const Divider(),
-  Center(
-    child: StreamBuilder<double>(
-      stream: widget.weightStream,
-      builder: (context, snapshot) {
-        final grams = snapshot.data ?? 0.0;
-        return Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).dividerColor),
-              ),
-              child: Text(
-                "${grams.toStringAsFixed(1)} g",
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
+                if (widget.isScaleConnected && widget.weightStream != null) ...[
+                  const Divider(),
+                  Center(
+                    child: StreamBuilder<double>(
+                      stream: widget.weightStream,
+                      builder: (context, snapshot) {
+                        final grams = snapshot.data ?? 0.0;
+                        return Column(
+                          children: [
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 24,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Theme.of(context).dividerColor,
+                                ),
+                              ),
+                              child: Text(
+                                "${grams.toStringAsFixed(1)} g",
+                                style: const TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
 
-            if (widget.isScaleConnected) // 👈 acá sí va el if directo
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.scale),
-                  label: Text("Usar peso (${grams.toStringAsFixed(1)} g)"),
-                  onPressed: (grams > 0)
-                      ? () => Navigator.pop(context, grams)
-                      : null,
-                ),
-              ),
-          ],
-        );
-      },
-    ),
-  ),
-],
-
-
+                            if (widget
+                                .isScaleConnected) // 👈 acá sí va el if directo
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  icon: const Icon(Icons.scale),
+                                  label: Text(
+                                    "Usar peso (${grams.toStringAsFixed(1)} g)",
+                                  ),
+                                  onPressed: (grams > 0)
+                                      ? () => Navigator.pop(context, grams)
+                                      : null,
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 8),
                 SizedBox(

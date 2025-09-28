@@ -4,8 +4,13 @@ import 'package:permission_handler/permission_handler.dart';
 
 class BluetoothManager extends StatefulWidget {
   final void Function(double grams) onWeightChanged;
+  final void Function(bool isConnected) onConnectionChanged;
 
-  const BluetoothManager({super.key, required this.onWeightChanged});
+  const BluetoothManager({
+    super.key,
+    required this.onWeightChanged,
+    required this.onConnectionChanged,
+  });
 
   @override
   State<BluetoothManager> createState() => _BluetoothManagerState();
@@ -28,13 +33,17 @@ class _BluetoothManagerState extends State<BluetoothManager> {
   }
 
   void _startScan() {
-    setState(() => _scanResults.clear());
     FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
 
     FlutterBluePlus.scanResults.listen((results) {
-      setState(() {
-        _scanResults = results;
-      });
+      for (var result in results) {
+        final name = result.device.platformName.toLowerCase();
+        if (name.contains('macroscale') && _connectedDevice == null) {
+          FlutterBluePlus.stopScan();
+          _connectToDevice(result.device);
+          break;
+        }
+      }
     });
   }
 
@@ -42,9 +51,10 @@ class _BluetoothManagerState extends State<BluetoothManager> {
     await device.connect(
       timeout: const Duration(seconds: 10),
       autoConnect: false,
-      );
+    );
 
     setState(() => _connectedDevice = device);
+    widget.onConnectionChanged(true); // Notificar conexión
 
     final services = await device.discoverServices();
     for (var service in services) {
@@ -70,41 +80,56 @@ class _BluetoothManagerState extends State<BluetoothManager> {
         if (_connectedDevice == null) ...[
           ElevatedButton(
             onPressed: _startScan,
-            child: const Text("Buscar balanza"),
+            child: const Text("Conectar"),
           ),
-          ..._scanResults.map((r) => ListTile(
-                title: Text(r.device.name.isNotEmpty
+          ..._scanResults.map(
+            (r) => ListTile(
+              title: Text(
+                r.device.name.isNotEmpty
                     ? r.device.name
-                    : r.device.remoteId.toString()),
-                subtitle: Text("RSSI: ${r.rssi}"),
-                trailing: ElevatedButton(
-                  onPressed: () => _connectToDevice(r.device),
-                  child: const Text("Conectar"),
-                ),
-              )),
+                    : r.device.remoteId.toString(),
+              ),
+              subtitle: Text("RSSI: ${r.rssi}"),
+              trailing: ElevatedButton(
+                onPressed: () => _connectToDevice(r.device),
+                child: const Text("Conectar"),
+              ),
+            ),
+          ),
         ] else ...[
-          Text("Conectado a ${_connectedDevice!.name}",
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: () async {
-              await _connectedDevice!.disconnect();
-              setState(() => _connectedDevice = null);
-            },
-            child: const Text("Desconectar"),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "${_connectedDevice!.platformName}",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                ),
+              ),
+              const SizedBox(width: 8),
+              OutlinedButton(
+                onPressed: () async {
+                  await _connectedDevice!.disconnect();
+                  setState(() => _connectedDevice = null);
+                  widget.onConnectionChanged(false); // Notificar desconexión
+                },
+                child: const Text("Desconectar"),
+              ),
+            ],
           ),
         ],
       ],
     );
   }
 
-@override
-void dispose() {
-  try {
-    _connectedDevice?.disconnect();
-  } catch (e) {
-    debugPrint("Error al desconectar: $e");
+  @override
+  void dispose() {
+    try {
+      _connectedDevice?.disconnect();
+    } catch (e) {
+      debugPrint("Error al desconectar: $e");
+    }
+    super.dispose();
   }
-  super.dispose();
-}
 }
