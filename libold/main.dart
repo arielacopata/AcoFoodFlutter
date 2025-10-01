@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'models/user_profile.dart';
+import 'services/preferences_service.dart';
 import 'home_page.dart';
 import 'services/food_repository.dart'; // <-- 1. Importa el repositorio
 import 'services/database_service.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   // <-- 2. Conviértelo en async
   // Asegúrate de que los bindings de Flutter estén inicializados
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('es', null);
+
   // <-- 3. Carga los alimentos antes de correr la app
   await FoodRepository().loadFoods();
 
@@ -86,34 +85,20 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
   Widget build(BuildContext context) {
     // Mientras 'profile' es null, podrías mostrar una pantalla de carga
     if (profile == null) {
-  return const MaterialApp(
-    localizationsDelegates: [
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: [Locale('es', 'ES')],
-    locale: Locale('es', 'ES'),
-    home: Scaffold(body: Center(child: CircularProgressIndicator())),
-  );
-}
-return MaterialApp(
-  title: "AcoFood",
-  theme: ThemeData.light(),
-  darkTheme: ThemeData.dark(),
-  themeMode: _themeMode,
-  localizationsDelegates: const [
-    GlobalMaterialLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-  ],
-  supportedLocales: const [Locale('es', 'ES')],
-  locale: const Locale('es', 'ES'),
-  home: HomePage(
-    profile: profile!,
-    onUpdateProfile: _saveProfile,
-    onToggleTheme: _toggleTheme,
-  ),
-);
+      return const MaterialApp(
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
+    return MaterialApp(
+      title: "AcoFood",
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: _themeMode,
+      home: HomePage(
+        profile: profile!,
+        onUpdateProfile: _saveProfile,
+        onToggleTheme: _toggleTheme,
+      ),
+    );
   }
 }

@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/food_entry.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/database_service.dart';
 
 class ExportService {
   /// Genera texto plano para Zepp
@@ -22,18 +24,41 @@ class ExportService {
     await Clipboard.setData(ClipboardData(text: text));
   }
 
-  /// Genera JSON para backup
-  static String generateJsonBackup(List<FoodEntry> entries) {
-    if (entries.isEmpty) return "[]";
-    
-    final list = entries.map((entry) => {
-      'foodId': entry.food.id,
-      'grams': entry.grams,
-      'timestamp': entry.timestamp.toIso8601String(),
-    }).toList();
-    
-    return jsonEncode(list);
-  }
+/// Genera JSON completo para backup (perfil, historial, hábitos, preferencias)
+static Future<String> generateJsonBackup(List<FoodEntry> entries) async {
+  final db = await DatabaseService.instance.database;
+  
+  // Obtener todos los datos
+  final profile = await DatabaseService.instance.getUserProfile();
+  final allHistory = await db.query('history', orderBy: 'timestamp DESC');
+  final habitLogs = await db.query('habit_logs', orderBy: 'timestamp DESC');
+  final foodUsage = await db.query('food_usage');
+  final habits = await db.query('habits');
+  
+  // Obtener preferencias
+  final prefs = await SharedPreferences.getInstance();
+  final preferences = {
+    'sort_order': prefs.getString('sort_order'),
+    'theme_mode': prefs.getString('theme_mode'),
+    'b12_enabled': prefs.getBool('b12_enabled'),
+    'lino_enabled': prefs.getBool('lino_enabled'),
+    'legumbres_enabled': prefs.getBool('legumbres_enabled'),
+  };
+  
+  // Construir JSON completo
+  final backup = {
+    'version': '1.0',
+    'exportDate': DateTime.now().toIso8601String(),
+    'profile': profile?.toMap(),
+    'history': allHistory,
+    'habitLogs': habitLogs,
+    'foodUsage': foodUsage,
+    'habits': habits,
+    'preferences': preferences,
+  };
+  
+  return jsonEncode(backup);
+}
 
   /// Comparte archivo JSON usando share_plus
   static Future<void> shareJsonFile(String jsonContent) async {

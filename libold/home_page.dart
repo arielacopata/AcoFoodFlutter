@@ -19,12 +19,6 @@ import '../widgets/macro_progress_circle.dart';
 import '../widgets/nutrition_report_sheet.dart';
 
 import 'services/calorie_calculator.dart';
-import 'services/export_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:intl/intl.dart';
-import 'widgets/habits_modal.dart';
-import 'models/habit.dart';
 
 final StreamController<double> _weightController = StreamController.broadcast();
 bool _isScaleConnected = false; // Agregar esta variabl
@@ -51,17 +45,6 @@ class _HomePageState extends State<HomePage> {
   double _tareWeight = 0.0;
   bool _scaleExpanded = false;
   bool _isSearchFocused = false;
-  // Variables para recordatorios
-  bool _b12Completed = false;
-  bool _linoCompleted = false;
-  bool _legumbresCompleted = false;
-
-  bool _b12Enabled = true;
-  bool _linoEnabled = true;
-  bool _legumbresEnabled = true;
-  String _sortOrder = 'alfabetico';
-  Map<int, int> _foodUsageCounts = {};
-  DateTime _selectedDate = DateTime.now();
   final FocusNode _searchFocusNode = FocusNode(); // <-- Agrega esto
   // Peso neto (siempre positivo para tu caso de uso)
   double get _netWeight => (_weight - _tareWeight).abs();
@@ -78,327 +61,9 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _buildDisplayGroups();
     _loadHistory();
-    _loadDailyReminders();
-    _loadSortOrder();
     // 1. AÑADE un "oyente" al foco del buscador
     _searchFocusNode.addListener(_onSearchFocusChange);
   }
-
-  Future<void> _loadSortOrder() async {
-    final prefs = await SharedPreferences.getInstance();
-    final counts = await DatabaseService.instance.getFoodUsageCounts();
-    setState(() {
-      _sortOrder = prefs.getString('sort_order') ?? 'alfabetico';
-      _foodUsageCounts = counts;
-    });
-    _buildDisplayGroups(); // Reconstruir con el nuevo orden
-  }
-
-  // Mostrar modal de In/Out
-  void _showInOutModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Importar / Exportar',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'EXPORTAR DATOS DEL DÍA',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _exportAsText,
-                    child: const Text('Como Texto\n(para Zepp)'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _exportAsJson,
-                    child: const Text('Como Archivo\n(Backup)'),
-                  ),
-                ),
-              ],
-            ),
-            //    ListTile(
-              //        leading: const Icon(Icons.upload_file),
-                //      title: const Text('Restaurar desde Archivo'),
-                  //    onTap: () async {
-                    //    // Aquí irá la lógica para seleccionar archivo
-                      //  Navigator.pop(context);
-                        //_importBackup();
-                      //},
-           //         ),
-            // const SizedBox(height: 24),
-            // const Text(
-            //   'IMPORTAR DATOS',
-            //   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            // ),
-            // const SizedBox(height: 12),
-            // ElevatedButton(
-            //  onPressed: _importFromFile,
-            //   child: const Text('Importar desde Archivo'),
-            // ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showHabitsSettings() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => FutureBuilder<List<Habit>>(
-        future: DatabaseService.instance.getAllHabits(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          return Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Configurar tareas',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, size: 20),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              builder: (context) => HabitsModal(
-                                onSettingsTap: _showHabitsSettings,
-                              ),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ...snapshot.data!.map((habit) {
-                  return CheckboxListTile(
-                    secondary: Text(
-                      habit.emoji ?? '',
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                    title: Text(habit.name),
-                    value: habit.enabled,
-                    onChanged: (value) async {
-                      await DatabaseService.instance.updateHabitEnabled(
-                        habit.id!,
-                        value ?? true,
-                      );
-                      Navigator.pop(context);
-                      _showHabitsSettings();
-                    },
-                  );
-                }),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-Future<void> _importBackup() async {
-  // Por ahora mostrar diálogo de confirmación
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Restaurar Backup'),
-      content: const Text('Esto sobrescribirá todos tus datos actuales. ¿Continuar?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Restaurar'),
-        ),
-      ],
-    ),
-  );
-  
-  if (confirm != true) return;
-  
-  // TODO: Implementar selector de archivo
-  // Por ahora solo la estructura
-}
-
-  Future<void> _loadDailyReminders() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().split('T')[0];
-
-    setState(() {
-      // Estados diarios (se resetean)
-      _b12Completed = prefs.getBool('b12_$today') ?? false;
-      _linoCompleted = prefs.getBool('lino_$today') ?? false;
-      _legumbresCompleted = prefs.getBool('legumbres_$today') ?? false;
-
-      // Estados habilitados (permanentes)
-      _b12Enabled = prefs.getBool('b12_enabled') ?? true;
-      _linoEnabled = prefs.getBool('lino_enabled') ?? true;
-      _legumbresEnabled = prefs.getBool('legumbres_enabled') ?? true;
-    });
-  }
-
-  Future<void> _toggleReminder(String reminder) async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().split('T')[0];
-
-    setState(() {
-      if (reminder == 'b12') {
-        _b12Completed = true;
-        prefs.setBool('b12_$today', true);
-      } else if (reminder == 'lino') {
-        _linoCompleted = true;
-        prefs.setBool('lino_$today', true);
-      } else if (reminder == 'legumbres') {
-        _legumbresCompleted = true;
-        prefs.setBool('legumbres_$today', true);
-      }
-    });
-  }
-
-  Widget _buildReminderBanner() {
-    String? currentReminder;
-    String? reminderKey;
-
-    if (!_b12Completed && _b12Enabled) {
-      currentReminder = '💊 Recordatorio: Tomar B12';
-      reminderKey = 'b12';
-    } else if (!_linoCompleted && _linoEnabled) {
-      currentReminder = '🌾 Recordatorio: Semillas de lino';
-      reminderKey = 'lino';
-    } else if (!_legumbresCompleted && _legumbresEnabled) {
-      currentReminder = '🫘 Recordatorio: Remojar legumbres';
-      reminderKey = 'legumbres';
-    }
-
-    if (currentReminder == null) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.amber.shade100, Colors.orange.shade50],
-        ),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber.shade400),
-      ),
-      child: ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        title: Text(
-          currentReminder,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-        ),
-        trailing: IconButton(
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-          icon: const Icon(
-            Icons.check_circle_outline,
-            color: Colors.green,
-            size: 24,
-          ),
-          onPressed: () => _toggleReminder(reminderKey!),
-        ),
-      ),
-    );
-  }
-
-  // Exportar como texto
-  Future<void> _exportAsText() async {
-    final text = ExportService.generateTextForZepp(_history);
-    await ExportService.copyToClipboard(text);
-
-    if (mounted) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Texto copiado al portapapeles'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  // Exportar como JSON
-  // Elimina el import de file_picker
-  // import 'package:file_picker/file_picker.dart';  // ← ELIMINA
-
-  // Modifica _exportAsJson para usar share en lugar de guardar
-  Future<void> _exportAsJson() async {
-    try {
-        final jsonContent = await ExportService.generateJsonBackup(_history);
-        await ExportService.shareJsonFile(jsonContent);
-
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup listo para compartir')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al exportar: $e')));
-      }
-    }
-  }
-
-  // Elimina el método _importFromFile por ahora
-  // (lo agregaremos más tarde con otra solución)
 
   // Función para mostrar información nutricional completa
   Future<void> _showNutritionInfo(FoodEntry entry) async {
@@ -569,52 +234,8 @@ Future<void> _importBackup() async {
     }
   }
 
-  void _previousDay() {
-    setState(() {
-      _selectedDate = _selectedDate.subtract(const Duration(days: 1));
-    });
-    _loadHistory();
-  }
-
-  void _nextDay() {
-    final tomorrow = _selectedDate.add(const Duration(days: 1));
-    final today = DateTime.now();
-
-    // No permitir ir más allá de hoy
-    if (tomorrow.isBefore(today) ||
-        tomorrow.year == today.year &&
-            tomorrow.month == today.month &&
-            tomorrow.day == today.day) {
-      setState(() {
-        _selectedDate = tomorrow;
-      });
-      _loadHistory();
-    }
-  }
-
-  String _getDateLabel() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final selected = DateTime(
-      _selectedDate.year,
-      _selectedDate.month,
-      _selectedDate.day,
-    );
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    if (selected == today) {
-      return 'Hoy';
-    } else if (selected == yesterday) {
-      return 'Ayer';
-    } else {
-      return DateFormat('EEE, d \'de\' MMM', 'es').format(_selectedDate);
-    }
-  }
-
   Future<void> _loadHistory() async {
-    final entries = await DatabaseService.instance.getEntriesByDate(
-      _selectedDate,
-    );
+    final entries = await DatabaseService.instance.getTodayEntries();
     setState(() {
       _history = entries;
     });
@@ -624,12 +245,9 @@ Future<void> _importBackup() async {
   // 2. SIMPLIFICA este método.
   void _buildDisplayGroups() {
     final allFoods = _foodRepo.getAllFoods();
+    // Ahora solo llama a la función externa, pasándole los datos correctos.
     setState(() {
-      _displayGroups = getFoodGroups(
-        allFoods,
-        sortOrder: _sortOrder,
-        usageCounts: _foodUsageCounts,
-      );
+      _displayGroups = getFoodGroups(allFoods);
     });
   }
 
@@ -713,11 +331,6 @@ Future<void> _importBackup() async {
 
         // Guarda en la base de datos
         await DatabaseService.instance.createEntry(newEntry);
-
-        // Incrementar contador de uso
-        await DatabaseService.instance.incrementFoodUsage(
-          food.id!,
-        ); // 👈 Agregar esto
 
         // Recarga el historial desde la base de datos para tener todo sincronizado
         _loadHistory();
@@ -813,19 +426,8 @@ Future<void> _importBackup() async {
       }, // Solo grupos con resultados
       child: Scaffold(
         appBar: AppBar(
-          title: const Center(child: Text('AcoFood')),
+          title: const Text("AcoFood"),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.task_alt),
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (context) =>
-                      HabitsModal(onSettingsTap: _showHabitsSettings),
-                );
-              },
-            ),
             IconButton(
               icon: const Icon(Icons.brightness_6),
               onPressed: widget.onToggleTheme,
@@ -840,47 +442,35 @@ Future<void> _importBackup() async {
             setState(() {}); // Fuerza rebuild para actualizar la UI
           },
           onHistoryChanged: () {
+            // 👈 NUEVO
             _loadHistory(); // Recarga el historial
-          },
-          onSortOrderChanged: (newOrder) async {
-            setState(() => _sortOrder = newOrder);
-            final counts = await DatabaseService.instance.getFoodUsageCounts();
-            setState(() => _foodUsageCounts = counts);
-            _buildDisplayGroups();
-          },
-          onRemindersChanged: () {
-            // Agregar esto
-            _loadDailyReminders();
           },
         ),
         body: Column(
           children: [
             // Panel de balanza colapsable
-            _buildReminderBanner(),
             Card(
-              margin: const EdgeInsets.fromLTRB(16, 4, 16, 8), // Ya lo tienes
+              margin: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Header siempre visible - COMPACTAR ESTO
+                  // Header siempre visible
                   InkWell(
                     onTap: () =>
                         setState(() => _scaleExpanded = !_scaleExpanded),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ), // Reducir de 16 a 12/8
+                      padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          if (!_isScaleConnected)
+                          if (!_isScaleConnected) // Solo mostrar cuando NO estÃ¡ conectada
                             const Text(
                               'Balanza',
                               style: TextStyle(
-                                fontSize: 14, // Reducir de 16 a 14
-                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           const Spacer(),
+
                           BluetoothManager(
                             onWeightChanged: (grams) {
                               setState(() => _weight = grams);
@@ -890,69 +480,57 @@ Future<void> _importBackup() async {
                               setState(() => _isScaleConnected = isConnected);
                             },
                           ),
-                          // Botones más compactos
+                          // Botón TARA/RESET
                           if (_tareWeight == 0)
                             OutlinedButton.icon(
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                minimumSize: const Size(0, 32),
-                              ),
                               onPressed: _weight > 0 ? _setTare : null,
-                              icon: const Icon(Icons.exposure_zero, size: 16),
-                              label: const Text(
-                                'TARA',
-                                style: TextStyle(fontSize: 12),
-                              ),
+                              icon: const Icon(Icons.exposure_zero, size: 18),
+                              label: const Text('TARA'),
                             )
                           else
-                            TextButton.icon(
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: _resetTare,
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('RESET'),
                                 ),
-                                minimumSize: const Size(0, 28),
-                              ),
-                              onPressed: _resetTare,
-                              icon: const Icon(Icons.refresh, size: 14),
-                              label: const Text(
-                                'RESET',
-                                style: TextStyle(fontSize: 12),
-                              ),
+                              ],
                             ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 8),
                           Icon(
                             _scaleExpanded
                                 ? Icons.expand_less
                                 : Icons.expand_more,
-                            size: 20,
                           ),
                         ],
                       ),
                     ),
                   ),
+
                   // Contenido expandible
                   if (_scaleExpanded) ...[
                     const Divider(height: 1),
                     Padding(
-                      padding: const EdgeInsets.all(12), // Reducir de 16 a 12
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
+                          // Peso bruto (si hay tara)
                           if (_tareWeight > 0)
                             Text(
                               "Bruto: ${_weight.toStringAsFixed(1)} g",
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: 16,
                                 color: Colors.grey,
                               ),
                             ),
+
+                          // Peso neto
                           Text(
                             "${_netWeight.toStringAsFixed(1)} g",
                             style: TextStyle(
-                              fontSize: 40, // Reducir de 48 a 40
+                              fontSize: 48,
                               fontWeight: FontWeight.bold,
                               color: _tareWeight > 0 ? Colors.green : null,
                             ),
@@ -971,8 +549,8 @@ Future<void> _importBackup() async {
                 padding: const EdgeInsets.all(16),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
-                  crossAxisSpacing: 6,
-                  mainAxisSpacing: 6,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
                 ),
                 // 5. ¡AQUÍ USAMOS LA VARIABLE!
                 itemCount: displayItems.length,
@@ -991,25 +569,22 @@ Future<void> _importBackup() async {
                         }
                       },
                       child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                item.emoji,
-                                style: const TextStyle(fontSize: 28),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              item.emoji,
+                              style: const TextStyle(fontSize: 28),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              item.groupName,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                item.groupName,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -1018,25 +593,22 @@ Future<void> _importBackup() async {
                     return InkWell(
                       onTap: () => _openFoodBottomSheet(item),
                       child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                item.emoji,
-                                style: const TextStyle(fontSize: 28),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              item.emoji,
+                              style: const TextStyle(fontSize: 28),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              item.name,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                item.name,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -1050,6 +622,8 @@ Future<void> _importBackup() async {
               // Historial colapsable
               Column(
                 children: [
+                  // El historial que ya tenías
+
                   // ¡AQUÍ VA EL NUEVO WIDGET DE TOTALES!
                   if (_currentReport != null)
                     // AHORA CONSTRUIMOS EL WIDGET CON LOS DATOS REALES
@@ -1073,7 +647,9 @@ Future<void> _importBackup() async {
                                 // Título con calorías
                                 RichText(
                                   text: TextSpan(
-                                    style: const TextStyle(fontSize: 16),
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                    ), // 👈 Texto más pequeño
                                     children: [
                                       const TextSpan(text: "🔥 "),
                                       TextSpan(
@@ -1087,65 +663,27 @@ Future<void> _importBackup() async {
                                     ],
                                   ),
                                 ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    OutlinedButton(
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ), // Más compacto
-                                        minimumSize: const Size(
-                                          0,
-                                          0,
-                                        ), // Sin tamaño mínimo
-                                        tapTargetSize: MaterialTapTargetSize
-                                            .shrinkWrap, // Reduce el área táctil
-                                      ),
-                                      onPressed: () {
-                                        if (_currentReport != null) {
-                                          showModalBottomSheet(
-                                            context: context,
-                                            isScrollControlled: true,
-                                            backgroundColor: Colors.transparent,
-                                            builder: (context) =>
-                                                NutritionReportSheet(
-                                                  report: _currentReport!,
-                                                  totalCaloriesGoal:
-                                                      totalCaloriesGoal,
-                                                  proteinGoalGrams:
-                                                      proteinGoalGrams,
-                                                  carbsGoalGrams:
-                                                      carbsGoalGrams,
-                                                  fatGoalGrams: fatGoalGrams,
-                                                ),
-                                          );
-                                        }
-                                      },
-                                      child: const Text(
-                                        "Reporte",
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    OutlinedButton(
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 8,
-                                        ),
-                                        minimumSize: const Size(0, 0),
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      onPressed: _showInOutModal,
-                                      child: const Text(
-                                        "In/Out",
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                    ),
-                                  ],
+                                OutlinedButton(
+                                  onPressed: () {
+                                    if (_currentReport != null) {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        builder: (context) =>
+                                            NutritionReportSheet(
+                                              report: _currentReport!,
+                                              totalCaloriesGoal:
+                                                  totalCaloriesGoal,
+                                              proteinGoalGrams:
+                                                  proteinGoalGrams,
+                                              carbsGoalGrams: carbsGoalGrams,
+                                              fatGoalGrams: fatGoalGrams,
+                                            ),
+                                      );
+                                    }
+                                  },
+                                  child: const Text("Reporte"),
                                 ),
                               ],
                             ),
@@ -1185,43 +723,8 @@ Future<void> _importBackup() async {
                     ),
                   ExpansionTile(
                     initiallyExpanded: false,
-                    tilePadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 0,
-                    ), // Sin padding vertical
-                    dense: true, // Hace el tile más compacto
-                    visualDensity:
-                        VisualDensity.compact, // Reduce aún más la altura
-                    leading: const Icon(
-                      Icons.history,
-                      size: 18,
-                    ), // Icono más pequeño
-                    title: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.chevron_left, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: _previousDay,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${_getDateLabel()} (${_history.length} registros)',
-                            style: const TextStyle(
-                              fontSize: 13,
-                            ), // Texto más pequeño
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.chevron_right, size: 20),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: _nextDay,
-                        ),
-                      ],
-                    ),
+                    leading: const Icon(Icons.history),
+                    title: Text('Historial (${_history.length} registros)'),
                     children: [
                       Container(
                         constraints: const BoxConstraints(maxHeight: 200),
