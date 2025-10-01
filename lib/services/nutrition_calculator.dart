@@ -1,7 +1,6 @@
 // lib/services/nutrition_calculator.dart
 
 import '../models/food_entry.dart';
-import '../models/food.dart';
 import '../models/nutrition_report.dart';
 
 class NutritionCalculator {
@@ -32,6 +31,7 @@ class NutritionCalculator {
       _addToTotal(totals, 'copper', food.copper * scale);
       _addToTotal(totals, 'manganese', food.manganese * scale);
       _addToTotal(totals, 'selenium', food.selenium * scale);
+      _addToTotal(totals, 'iodine', food.iodine * scale);
       _addToTotal(totals, 'vitaminA', food.vitaminA * scale);
       _addToTotal(totals, 'vitaminC', food.vitaminC * scale);
       _addToTotal(totals, 'vitaminE', food.vitaminE * scale);

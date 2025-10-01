@@ -27,6 +27,7 @@ class Food {
   final double copper;
   final double manganese;
   final double selenium;
+  final double iodine;
   final double vitaminA;
   final double vitaminC;
   final double vitaminE;
@@ -65,6 +66,7 @@ class Food {
     this.copper = 0,
     this.manganese = 0,
     this.selenium = 0,
+    this.iodine = 0,
     this.vitaminA = 0,
     this.vitaminC = 0,
     this.vitaminE = 0,
@@ -106,6 +108,7 @@ class Food {
       copper: nutrients["Cobre"] ?? 0,
       manganese: nutrients["Manganeso"] ?? 0,
       selenium: nutrients["Selenio"] ?? 0,
+      iodine: nutrients["Yodo"] ?? 0,
       vitaminA: nutrients["Vitamina A"] ?? 0,
       vitaminC: nutrients["Vitamina C"] ?? 0,
       vitaminE: nutrients["Vitamina E"] ?? 0,

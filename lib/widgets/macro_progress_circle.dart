@@ -1,7 +1,6 @@
 // En: lib/widgets/macro_progress_circle.dart
 
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 class MacroProgressCircle extends StatelessWidget {
   final String title;

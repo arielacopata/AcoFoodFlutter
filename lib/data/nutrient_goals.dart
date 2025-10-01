@@ -41,4 +41,5 @@ final Map<String, Map<String, dynamic>> nutrientGoals = {
   'vitaminB6': {'value': 1.7, 'unit': 'mg', 'type': 'RDA'},
   'vitaminB7': {'value': 30.0, 'unit': 'mcg', 'type': 'AI'},
   'vitaminB9': {'value': 400.0, 'unit': 'mcg', 'type': 'RDA'},
+  'iodine': {'value': 150.0, 'unit': 'mcg', 'type': 'RDA'},
 };

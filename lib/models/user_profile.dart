@@ -1,37 +1,69 @@
+// lib/models/user_profile.dart
+
 class UserProfile {
-  String name;
-  double weight;
-  double height;
-  int carbs;
-  int protein;
-  int fat;
+  final int id;
+  final String? name;
+  final String? email;
+  final DateTime? dob;
+  final String? gender;
+  final double? weight;
+  final double? height;
+  final String? lifestyle;
+  final String? exerciseLevel;
+  final int? expenditure;
+  final int? carbs; // <-- AÑADIDO
+  final int? protein; // <-- AÑADIDO
+  final int? fat; // <-- AÑADIDO
 
   UserProfile({
-    this.name = "",
-    this.weight = 0,
-    this.height = 0,
-    this.carbs = 50,
-    this.protein = 20,
-    this.fat = 30,
+    this.id = 1,
+    this.name,
+    this.email,
+    this.dob,
+    this.gender,
+    this.weight,
+    this.height,
+    this.lifestyle,
+    this.exerciseLevel,
+    this.expenditure,
+    this.carbs, // <-- AÑADIDO
+    this.protein, // <-- AÑADIDO
+    this.fat, // <-- AÑADIDO
   });
 
-  Map<String, dynamic> toJson() => {
-    "name": name,
-    "weight": weight,
-    "height": height,
-    "carbs": carbs,
-    "protein": protein,
-    "fat": fat,
-  };
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'dob': dob?.toIso8601String(),
+      'gender': gender,
+      'weight': weight,
+      'height': height,
+      'lifestyle': lifestyle,
+      'exerciseLevel': exerciseLevel,
+      'expenditure': expenditure,
+      'carbs': carbs, // <-- AÑADIDO
+      'protein': protein, // <-- AÑADIDO
+      'fat': fat, // <-- AÑADIDO
+    };
+  }
 
-  factory UserProfile.fromPrefs(Map<String, Object?> prefs) {
+  static UserProfile fromMap(Map<String, dynamic> map) {
     return UserProfile(
-      name: prefs["name"] as String? ?? "",
-      weight: (prefs["weight"] as double?) ?? 0,
-      height: (prefs["height"] as double?) ?? 0,
-      carbs: prefs["carbs"] as int? ?? 50,
-      protein: prefs["protein"] as int? ?? 20,
-      fat: prefs["fat"] as int? ?? 30,
+      id: map['id'],
+      name: map['name'],
+      email: map['email'],
+      dob: map['dob'] != null ? DateTime.parse(map['dob']) : null,
+      gender: map['gender'],
+      weight: map['weight'],
+      height: map['height'],
+      lifestyle: map['lifestyle'],
+      exerciseLevel: map['exerciseLevel'],
+      expenditure: map['expenditure'],
+      carbs: map['carbs'], // <-- AÑADIDO
+      protein: map['protein'], // <-- AÑADIDO
+      fat: map['fat'], // <-- AÑADIDO
     );
   }
 }

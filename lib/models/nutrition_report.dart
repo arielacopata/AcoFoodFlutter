@@ -1,7 +1,4 @@
-// En: lib/models/nutrition_report.dart
-
 class NutritionReport {
-  // --- MACROS ---
   final double calories;
   final double proteins;
   final double carbohydrates;
@@ -9,13 +6,9 @@ class NutritionReport {
   final double totalSugars;
   final double totalFats;
   final double saturatedFats;
-
-  // --- ÁCIDOS GRASOS ---
   final double omega3;
   final double omega6;
   final double omega9;
-
-  // --- MINERALES ---
   final double calcium;
   final double iron;
   final double magnesium;
@@ -26,8 +19,6 @@ class NutritionReport {
   final double copper;
   final double manganese;
   final double selenium;
-
-  // --- VITAMINAS ---
   final double vitaminA;
   final double vitaminC;
   final double vitaminE;
@@ -40,9 +31,9 @@ class NutritionReport {
   final double vitaminB6;
   final double vitaminB7;
   final double vitaminB9;
+  final double iodine;
 
   NutritionReport({
-    // Macros
     this.calories = 0,
     this.proteins = 0,
     this.carbohydrates = 0,
@@ -50,11 +41,9 @@ class NutritionReport {
     this.totalSugars = 0,
     this.totalFats = 0,
     this.saturatedFats = 0,
-    // Ácidos Grasos
     this.omega3 = 0,
     this.omega6 = 0,
     this.omega9 = 0,
-    // Minerales
     this.calcium = 0,
     this.iron = 0,
     this.magnesium = 0,
@@ -65,7 +54,6 @@ class NutritionReport {
     this.copper = 0,
     this.manganese = 0,
     this.selenium = 0,
-    // Vitaminas
     this.vitaminA = 0,
     this.vitaminC = 0,
     this.vitaminE = 0,
@@ -78,14 +66,9 @@ class NutritionReport {
     this.vitaminB6 = 0,
     this.vitaminB7 = 0,
     this.vitaminB9 = 0,
+    this.iodine = 0,
   });
 
-  // Un factory constructor para crear el reporte desde el mapa de totales
-  // En: lib/models/nutrition_report.dart
-
-  // ... (las propiedades y el constructor se mantienen igual)
-
-  // Reemplaza SOLAMENTE el factory constructor con este
   factory NutritionReport.fromMap(Map<String, double> totals) {
     return NutritionReport(
       calories: totals['calories'] ?? 0,
@@ -120,6 +103,7 @@ class NutritionReport {
       vitaminB6: totals['vitaminB6'] ?? 0,
       vitaminB7: totals['vitaminB7'] ?? 0,
       vitaminB9: totals['vitaminB9'] ?? 0,
+      iodine: totals['iodine'] ?? 0,
     );
   }
 }

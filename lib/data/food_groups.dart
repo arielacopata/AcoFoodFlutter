@@ -1,9 +1,13 @@
 import '../models/food.dart';
 import '../models/food_group.dart';
 
-// Convertimos la variable en una función que necesita la lista de alimentos
-List<FoodGroupDisplay> getFoodGroups(List<Food> allFoods) {
-  return [
+// Agregar parámetros opcionales
+List<FoodGroupDisplay> getFoodGroups(
+  List<Food> allFoods, {
+  String sortOrder = 'alfabetico',
+  Map<int, int> usageCounts = const {},
+}) {
+  final groups = [
     FoodGroupDisplay(
       groupName: "Avena",
       emoji: "🍚",
@@ -83,18 +87,44 @@ List<FoodGroupDisplay> getFoodGroups(List<Food> allFoods) {
       groupName: "Frutas",
       emoji: "🍓",
       items: allFoods
-          .where((f) => [79, 80, 81, 91, 61, 73].contains(f.id))
+          .where(
+            (f) => [79, 80, 81, 91, 61, 73, 94, 96, 97, 98, 99].contains(f.id),
+          )
           .toList(),
     ),
     FoodGroupDisplay(
       groupName: "Frutos Secos",
       emoji: "🥜",
-      items: allFoods.where((f) => [4, 6, 89, 90].contains(f.id)).toList(),
+      items: allFoods.where((f) => [89, 90].contains(f.id)).toList(),
+    ),
+    FoodGroupDisplay(
+      groupName: "Kiwi",
+      emoji: "🥝",
+      items: allFoods.where((f) => [95, 116].contains(f.id)).toList(),
+    ),
+    FoodGroupDisplay(
+      groupName: "Cereales y Granos",
+      emoji: "🌾",
+      items: allFoods
+          .where((f) => [106, 107, 108, 109].contains(f.id))
+          .toList(),
+    ),
+    FoodGroupDisplay(
+      groupName: "Aceites",
+      emoji: "💧",
+      items: allFoods.where((f) => [85, 86].contains(f.id)).toList(),
     ),
     FoodGroupDisplay(
       groupName: "Semillas",
       emoji: "🌱",
       items: allFoods.where((f) => [30, 58, 59, 60].contains(f.id)).toList(),
+    ),
+    FoodGroupDisplay(
+      groupName: "Especias",
+      emoji: "🌿",
+      items: allFoods
+          .where((f) => [92, 53, 55, 74, 56, 57, 113, 114, 115].contains(f.id))
+          .toList(),
     ),
     // En data/food_groups.dart, después de los otros grupos:
     FoodGroupDisplay(
@@ -106,7 +136,23 @@ List<FoodGroupDisplay> getFoodGroups(List<Food> allFoods) {
       groupName: "Verduras",
       emoji: "🥦",
       items: allFoods
-          .where((f) => [62, 63, 64, 66, 67, 68, 74, 78].contains(f.id))
+          .where(
+            (f) => [
+              62,
+              63,
+              64,
+              66,
+              67,
+              68,
+              74,
+              78,
+              100,
+              102,
+              103,
+              104,
+              105,
+            ].contains(f.id),
+          )
           .toList(),
     ),
     // Individuales
@@ -131,11 +177,6 @@ List<FoodGroupDisplay> getFoodGroups(List<Food> allFoods) {
       items: allFoods.where((f) => f.id == 4).toList(),
     ),
     FoodGroupDisplay(
-      groupName: "Mandarina",
-      emoji: "🍊",
-      items: allFoods.where((f) => f.id == 5).toList(),
-    ),
-    FoodGroupDisplay(
       groupName: "Nueces",
       emoji: "🌰",
       items: allFoods.where((f) => f.id == 6).toList(),
@@ -144,11 +185,6 @@ List<FoodGroupDisplay> getFoodGroups(List<Food> allFoods) {
       groupName: "Quinoa",
       emoji: "🍚",
       items: allFoods.where((f) => f.id == 20).toList(),
-    ),
-    FoodGroupDisplay(
-      groupName: "Lechuga",
-      emoji: "🥬",
-      items: allFoods.where((f) => f.id == 21).toList(),
     ),
     FoodGroupDisplay(
       groupName: "Rúcula",
@@ -170,5 +206,54 @@ List<FoodGroupDisplay> getFoodGroups(List<Food> allFoods) {
       emoji: "🥣",
       items: allFoods.where((f) => f.id == 41).toList(),
     ),
+    FoodGroupDisplay(
+      groupName: "Champignones",
+      emoji: "🍄",
+      items: allFoods.where((f) => f.id == 101).toList(),
+    ),
+    FoodGroupDisplay(
+      groupName: "Despensa",
+      emoji: "🥫",
+      items: allFoods
+          .where((f) => [54, 87, 88, 110, 111, 112].contains(f.id))
+          .toList(),
+    ),
   ];
+  // Ordenar los items de cada grupo según la preferencia
+  for (final group in groups) {
+    if (sortOrder == 'mas_usados') {
+      group.items.sort((a, b) {
+        final countA = usageCounts[a.id] ?? 0;
+        final countB = usageCounts[b.id] ?? 0;
+        if (countA != countB) {
+          return countB.compareTo(countA);
+        }
+        return a.name.compareTo(b.name);
+      });
+    } else {
+      group.items.sort((a, b) => a.name.compareTo(b.name));
+    }
+  }
+
+  // NUEVO: Ordenar también los GRUPOS por uso total
+  if (sortOrder == 'mas_usados') {
+    groups.sort((groupA, groupB) {
+      // Sumar el uso total de cada grupo
+      final totalA = groupA.items.fold<int>(
+        0,
+        (sum, food) => sum + (usageCounts[food.id] ?? 0),
+      );
+      final totalB = groupB.items.fold<int>(
+        0,
+        (sum, food) => sum + (usageCounts[food.id] ?? 0),
+      );
+
+      if (totalA != totalB) {
+        return totalB.compareTo(totalA); // Más usados primero
+      }
+      return groupA.groupName.compareTo(groupB.groupName);
+    });
+  }
+
+  return groups;
 }

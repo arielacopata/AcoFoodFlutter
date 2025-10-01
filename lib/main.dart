@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'models/user_profile.dart';
-import 'services/preferences_service.dart';
 import 'home_page.dart';
 import 'services/food_repository.dart'; // <-- 1. Importa el repositorio
+import 'services/database_service.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   // <-- 2. Conviértelo en async
   // Asegúrate de que los bindings de Flutter estén inicializados
   WidgetsFlutterBinding.ensureInitialized();
-
+  await initializeDateFormatting('es', null);
   // <-- 3. Carga los alimentos antes de correr la app
   await FoodRepository().loadFoods();
 
@@ -24,8 +25,9 @@ class AcoFoodApp extends StatefulWidget {
 
 class _AcoFoodAppState extends State<AcoFoodApp> {
   ThemeMode _themeMode = ThemeMode.light;
-  UserProfile profile = UserProfile();
-  final PreferencesService _prefsService = PreferencesService();
+  UserProfile? profile;
+  // final PreferencesService _prefsService = PreferencesService();
+  final bool _isLoading = true;
 
   @override
   void initState() {
@@ -33,15 +35,39 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
     _loadProfile();
   }
 
+  // CAMBIO: Carga desde DatabaseService (SQLite)
   Future<void> _loadProfile() async {
-    final loaded = await _prefsService.loadProfile();
-    setState(() {
-      profile = loaded;
-    });
+    try {
+      final loaded = await DatabaseService.instance.getUserProfile();
+
+      if (loaded == null) {
+        final defaultProfile = UserProfile(id: 1, name: "Default");
+        await DatabaseService.instance.saveUserProfile(defaultProfile);
+
+        setState(() {
+          profile = defaultProfile;
+        });
+
+        print("DEBUG: Perfil por defecto creado");
+      } else {
+        setState(() {
+          profile = loaded;
+        });
+
+        print("DEBUG: Perfil cargado: ${loaded.name}");
+      }
+    } catch (e, st) {
+      print("ERROR en _loadProfile: $e");
+      print(st);
+      setState(() {
+        profile = UserProfile(id: 1, name: "Error");
+      });
+    }
   }
 
+  // CAMBIO: Guarda en DatabaseService (SQLite)
   Future<void> _saveProfile(UserProfile newProfile) async {
-    await _prefsService.saveProfile(newProfile);
+    await DatabaseService.instance.saveUserProfile(newProfile);
     setState(() {
       profile = newProfile;
     });
@@ -57,13 +83,19 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Mientras 'profile' es null, podrías mostrar una pantalla de carga
+    if (profile == null) {
+      return const MaterialApp(
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
     return MaterialApp(
       title: "AcoFood",
       theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       themeMode: _themeMode,
       home: HomePage(
-        profile: profile,
+        profile: profile!,
         onUpdateProfile: _saveProfile,
         onToggleTheme: _toggleTheme,
       ),
