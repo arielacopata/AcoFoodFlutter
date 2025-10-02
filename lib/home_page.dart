@@ -1024,13 +1024,13 @@ Future<void> _importBackup() async {
         );
       },
     )
-  :  GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 6,
-                  mainAxisSpacing: 6,
-                ),
+                : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: _getCrossAxisCount(context), // 👈 CAMBIAR AQUÍ
+                      crossAxisSpacing: 6,
+                      mainAxisSpacing: 6,
+                    ),
                 // 5. ¡AQUÍ USAMOS LA VARIABLE!
                 itemCount: displayItems.length,
                 itemBuilder: (context, index) {
@@ -1295,7 +1295,7 @@ Future<void> _importBackup() async {
                                 style: const TextStyle(fontSize: 24),
                               ),
                               title: Text(
-                                "${entry.food.name} - ${entry.grams.toStringAsFixed(1)} g",
+                                "${entry.food.fullName} - ${entry.grams.toStringAsFixed(1)} g",
                               ),
                               subtitle: Text(
                                 "${(entry.food.calories * entry.grams / 100).toStringAsFixed(0)} kcal", // 👈 Calorías de la cantidad real
@@ -1411,4 +1411,20 @@ Future<void> _importBackup() async {
       ),
     );
   }
+  int _getCrossAxisCount(BuildContext context) {
+  final width = MediaQuery.of(context).size.width;
+  
+  // Tablet 2K en portrait (ancho > 768px)
+  if (width >= 768) {
+    return 5; // 5 columnas para tablets
+  }
+  
+  // Tablet mediana (ancho entre 600-768px)
+  if (width >= 600) {
+    return 4; // 4 columnas para tablets medianas
+  }
+  
+  // Mobile (ancho < 600px)
+  return 3; // 3 columnas para móviles
+}
 }

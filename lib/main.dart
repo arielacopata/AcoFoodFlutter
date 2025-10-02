@@ -5,11 +5,18 @@ import 'services/food_repository.dart'; // <-- 1. Importa el repositorio
 import 'services/database_service.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/services.dart'; 
 
 void main() async {
   // <-- 2. Conviértelo en async
   // Asegúrate de que los bindings de Flutter estén inicializados
   WidgetsFlutterBinding.ensureInitialized();
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
   await initializeDateFormatting('es', null);
   // <-- 3. Carga los alimentos antes de correr la app
   await FoodRepository().loadFoods();
