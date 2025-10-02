@@ -95,10 +95,12 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
     supportedLocales: [Locale('es', 'ES')],
     locale: Locale('es', 'ES'),
     home: Scaffold(body: Center(child: CircularProgressIndicator())),
+    debugShowCheckedModeBanner: false,
   );
 }
 return MaterialApp(
   title: "AcoFood",
+  debugShowCheckedModeBanner: false,
   theme: ThemeData.light(),
   darkTheme: ThemeData.dark(),
   themeMode: _themeMode,

@@ -4,6 +4,7 @@ import '../services/database_service.dart';
 import '../models/user_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/calorie_calculator.dart';
 // import '../services/google_fit_service.dart';
 
 class SettingsDrawer extends StatefulWidget {
@@ -214,6 +215,101 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       Navigator.of(context).pop();
     }
   }
+
+  String _getGoalText() {
+  if (widget.profile?.goalType == null) return 'No configurado';
+  
+  switch (widget.profile!.goalType) {
+    case 'deficit':
+      return 'Bajar peso (-500 kcal/día)';
+    case 'maintain':
+      return 'Mantener peso';
+    case 'surplus':
+      return 'Subir peso (+300 kcal/día)';
+    default:
+      return 'No configurado';
+  }
+}
+
+Future<void> _showGoalDialog() async {
+  final goal = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Objetivo de peso'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            title: const Text('Bajar peso'),
+            subtitle: const Text('Déficit de 500 kcal/día'),
+            onTap: () => Navigator.pop(context, 'deficit'),
+          ),
+          ListTile(
+            title: const Text('Mantener peso'),
+            subtitle: const Text('Sin ajuste calórico'),
+            onTap: () => Navigator.pop(context, 'maintain'),
+          ),
+          ListTile(
+            title: const Text('Subir peso'),
+            subtitle: const Text('Superávit de 300 kcal/día'),
+            onTap: () => Navigator.pop(context, 'surplus'),
+          ),
+        ],
+      ),
+    ),
+  );
+  
+  if (goal != null && widget.profile != null) {
+    final maintenanceCalories = CalorieCalculator.calculateRecommendedCalories(
+    dob: widget.profile!.dob,
+    gender: widget.profile!.gender,
+    weight: widget.profile!.weight,
+    height: widget.profile!.height,
+    lifestyle: widget.profile!.lifestyle,
+    exerciseLevel: widget.profile!.exerciseLevel,
+    expenditure: widget.profile!.expenditure,
+  ).toInt();
+  
+  int goalCalories = maintenanceCalories;
+    
+    switch (goal) {
+      case 'deficit':
+        goalCalories -= 500;
+        break;
+      case 'surplus':
+        goalCalories += 300;
+        break;
+    }
+    
+    final updatedProfile = UserProfile(
+      id: widget.profile!.id,
+      name: widget.profile!.name,
+      email: widget.profile!.email,
+      dob: widget.profile!.dob,
+      gender: widget.profile!.gender,
+      weight: widget.profile!.weight,
+      height: widget.profile!.height,
+      lifestyle: widget.profile!.lifestyle,
+      exerciseLevel: widget.profile!.exerciseLevel,
+      expenditure: widget.profile!.expenditure,
+      carbs: widget.profile!.carbs,
+      protein: widget.profile!.protein,
+      fat: widget.profile!.fat,
+      goalType: goal,
+      goalCalories: goalCalories,
+    );
+    
+    await DatabaseService.instance.saveUserProfile(updatedProfile);
+    if (widget.onProfileUpdated != null) {
+      widget.onProfileUpdated!(updatedProfile);
+    }
+    
+    if (widget.onHistoryChanged != null) {  // ← Agregar esto
+    widget.onHistoryChanged!();           // ← y esto
+    }
+    setState(() {});
+  }
+}
 
   // Diálogo de confirmación para borrar datos
   // Diálogo de confirmación para borrar datos
@@ -597,6 +693,20 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               ),
             ],
           ),
+          const Divider(),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'OBJETIVO',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.flag),
+                  title: const Text('Objetivo de peso'),
+                  subtitle: Text(_getGoalText()),
+                  onTap: _showGoalDialog,
+                ),
           ExpansionTile(
             initiallyExpanded: true,
             leading: const Icon(Icons.notifications_active),

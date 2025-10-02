@@ -14,6 +14,8 @@ class UserProfile {
   final int? carbs; // <-- AÑADIDO
   final int? protein; // <-- AÑADIDO
   final int? fat; // <-- AÑADIDO
+  final String? goalType; // 'deficit', 'maintain', 'surplus'
+  final int? goalCalories; // Calorías objetivo ajustadas según el goal
 
   UserProfile({
     this.id = 1,
@@ -29,6 +31,8 @@ class UserProfile {
     this.carbs, // <-- AÑADIDO
     this.protein, // <-- AÑADIDO
     this.fat, // <-- AÑADIDO
+    this.goalType,
+    this.goalCalories,
   });
 
   Map<String, dynamic> toMap() {
@@ -46,6 +50,8 @@ class UserProfile {
       'carbs': carbs, // <-- AÑADIDO
       'protein': protein, // <-- AÑADIDO
       'fat': fat, // <-- AÑADIDO
+      'goalType': goalType,
+      'goalCalories': goalCalories,
     };
   }
 
@@ -64,6 +70,8 @@ class UserProfile {
       carbs: map['carbs'], // <-- AÑADIDO
       protein: map['protein'], // <-- AÑADIDO
       fat: map['fat'], // <-- AÑADIDO
+      goalType: map['goalType'] as String?,
+      goalCalories: map['goalCalories'] as int?,
     );
   }
 }

@@ -25,6 +25,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'widgets/habits_modal.dart';
 import 'models/habit.dart';
+import 'screens/dashboard_screen.dart';
+import '../models/dashboard_stats.dart';
 
 final StreamController<double> _weightController = StreamController.broadcast();
 bool _isScaleConnected = false; // Agregar esta variabl
@@ -62,6 +64,7 @@ class _HomePageState extends State<HomePage> {
   String _sortOrder = 'alfabetico';
   Map<int, int> _foodUsageCounts = {};
   DateTime _selectedDate = DateTime.now();
+  bool _isListView = false; // false = grilla, true = lista
   final FocusNode _searchFocusNode = FocusNode(); // <-- Agrega esto
   // Peso neto (siempre positivo para tu caso de uso)
   double get _netWeight => (_weight - _tareWeight).abs();
@@ -773,16 +776,16 @@ Future<void> _importBackup() async {
     // (La ponemos aquí mismo para tener todo a mano)
 
     // 1. Calorías objetivo calculadas según el perfil
-    final double totalCaloriesGoal =
-        CalorieCalculator.calculateRecommendedCalories(
-          dob: widget.profile.dob,
-          gender: widget.profile.gender,
-          weight: widget.profile.weight,
-          height: widget.profile.height,
-          lifestyle: widget.profile.lifestyle,
-          exerciseLevel: widget.profile.exerciseLevel,
-          expenditure: widget.profile.expenditure,
-        );
+    final double totalCaloriesGoal = widget.profile.goalCalories?.toDouble() ??
+    CalorieCalculator.calculateRecommendedCalories(
+      dob: widget.profile.dob,
+      gender: widget.profile.gender,
+      weight: widget.profile.weight,
+      height: widget.profile.height,
+      lifestyle: widget.profile.lifestyle,
+      exerciseLevel: widget.profile.exerciseLevel,
+      expenditure: widget.profile.expenditure,
+    );
 
     // 2. Calculamos los gramos objetivo para cada macro
     final double proteinGoalGrams =
@@ -813,7 +816,21 @@ Future<void> _importBackup() async {
       }, // Solo grupos con resultados
       child: Scaffold(
         appBar: AppBar(
-          title: const Center(child: Text('AcoFood')),
+          title: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isListView = !_isListView;
+                      });
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('AcoFood'),
+                        const SizedBox(width: 8),
+                        Icon(_isListView ? Icons.list : Icons.grid_view, size: 20),
+                      ],
+                    ),
+                  ),
           actions: [
             IconButton(
               icon: const Icon(Icons.task_alt),
@@ -826,6 +843,15 @@ Future<void> _importBackup() async {
                 );
               },
             ),
+            IconButton(
+                icon: const Icon(Icons.dashboard),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => DashboardScreen()),
+                  );
+                },
+              ),
             IconButton(
               icon: const Icon(Icons.brightness_6),
               onPressed: widget.onToggleTheme,
@@ -967,7 +993,46 @@ Future<void> _importBackup() async {
 
             // Grid de alimentos
             Expanded(
-              child: GridView.builder(
+              child: 
+              _isListView
+  ? ListView.builder(
+      itemCount: _displayGroups.length,
+      itemBuilder: (context, index) {
+        final group = _displayGroups[index];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header de categoría
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                '${group.emoji} ${group.groupName}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            // Lista compacta de alimentos
+            ...group.items.map((food) => ListTile(
+              dense: true,
+              leading: Text(
+                food.emoji,
+                style: const TextStyle(fontSize: 24),
+              ),
+              title: Text(food.name),
+              subtitle: Text('${food.calories} kcal/100g'),
+              trailing: Text(
+                '${food.proteins.toStringAsFixed(1)}P • ${food.carbohydrates.toStringAsFixed(1)}C • ${food.totalFats.toStringAsFixed(1)}G',
+                style: const TextStyle(fontSize: 11),
+              ),
+              onTap: () => _openFoodBottomSheet(food),
+            )),
+          ],
+        );
+      },
+    )
+  :  GridView.builder(
                 padding: const EdgeInsets.all(16),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
