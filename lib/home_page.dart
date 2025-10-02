@@ -483,7 +483,7 @@ Future<void> _importBackup() async {
 
   // Función para editar la cantidad de un entry
   Future<void> _editEntry(FoodEntry entry) async {
-    final newGrams = await showModalBottomSheet<double?>(
+      final newGrams = await showModalBottomSheet<double?>(
       context: context,
       builder: (ctx) => FoodAmountSheet(
         food: entry.food,
@@ -615,10 +615,10 @@ Future<void> _importBackup() async {
   }
 
   Future<void> _loadHistory() async {
-    final entries = await DatabaseService.instance.getEntriesByDate(
+     final entries = await DatabaseService.instance.getEntriesByDate(
       _selectedDate,
     );
-    setState(() {
+      setState(() {
       _history = entries;
     });
     _recalculateTotals(); // Recalculamos al cargar
@@ -676,24 +676,16 @@ Future<void> _importBackup() async {
     // Si no hay nada en el historial, reseteamos el reporte.
     if (_history.isEmpty) {
       setState(() => _currentReport = null);
-      print("Historial vacío, reporte reseteado.");
+     // print("Historial vacío, reporte reseteado.");
       return;
     }
-
+    
     // Llamamos a nuestro calculador
     final report = await _calculator.calculateDailyTotals(_history);
-
+    
     setState(() {
       _currentReport = report;
     });
-
-    // Imprimimos en la consola para verificar que todo funciona
-    print("--- REPORTE ACTUALIZADO ---");
-    print("Calorías: ${report.calories.toStringAsFixed(2)}");
-    print("Proteínas: ${report.proteins.toStringAsFixed(2)} g");
-    print("Carbs: ${report.carbohydrates.toStringAsFixed(2)} g");
-    print("Grasas: ${report.totalFats.toStringAsFixed(2)} g");
-    print("-------------------------");
   }
 
   Future<void> _openFoodBottomSheet(Food food) async {
@@ -1249,6 +1241,7 @@ Future<void> _importBackup() async {
                       ),
                     ),
                   ExpansionTile(
+                    key: ValueKey('history_${_selectedDate.toIso8601String()}'),
                     initiallyExpanded: false,
                     tilePadding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -1291,6 +1284,7 @@ Future<void> _importBackup() async {
                       Container(
                         constraints: const BoxConstraints(maxHeight: 200),
                         child: ListView.builder(
+                          key: ValueKey('list_${_history.length}_${_history.hashCode}'),
                           shrinkWrap: true,
                           itemCount: _history.length,
                           itemBuilder: (context, index) {

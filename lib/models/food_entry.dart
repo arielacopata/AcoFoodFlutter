@@ -15,12 +15,21 @@ class FoodEntry {
   }) : timestamp = timestamp ?? DateTime.now();
 
   // Método para convertir a Map (para la BD)
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'foodId': food.id,
-      'grams': grams,
-      'timestamp': timestamp.toIso8601String(),
-    };
-  }
+Map<String, dynamic> toMap() {
+  return {
+    'id': id,
+    'foodId': food.id,
+    'grams': grams,
+    'timestamp': timestamp.toIso8601String(),
+  };
+}
+
+// Para UPDATE (sin id)
+Map<String, dynamic> toMapForUpdate() {
+  return {
+    'foodId': food.id,
+    'grams': grams,
+    'timestamp': timestamp.toIso8601String(),
+  };
+}
 }

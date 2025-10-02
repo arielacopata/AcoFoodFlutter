@@ -376,6 +376,7 @@ class DatabaseService {
       if (food != null) {
         entries.add(
           FoodEntry(
+            id: map['id'],
             food: food,
             grams: map['grams'],
             timestamp: DateTime.parse(map['timestamp']),
@@ -388,15 +389,15 @@ class DatabaseService {
   }
 
   // Método para actualizar un entry existente
-  Future<int> updateEntry(FoodEntry entry) async {
-    final db = await instance.database;
-    return await db.update(
-      'history',
-      entry.toMap(),
-      where: 'id = ?',
-      whereArgs: [entry.id],
-    );
-  }
+Future<int> updateEntry(FoodEntry entry) async {
+   final db = await instance.database;
+  return await db.update(
+    'history',
+    entry.toMapForUpdate(),  // ✅ Sin incluir id
+    where: 'id = ?',
+    whereArgs: [entry.id],
+  );
+}
 
   // Método para eliminar un entry
   Future<int> deleteEntry(int id) async {
