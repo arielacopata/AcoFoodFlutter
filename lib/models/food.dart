@@ -41,6 +41,17 @@ class Food {
   final double vitaminB7;
   final double vitaminB9;
 
+  // --- AMINOÁCIDOS ESENCIALES ---
+  final double histidine;
+  final double isoleucine;
+  final double leucine;
+  final double lysine;
+  final double methionine;
+  final double phenylalanine;
+  final double threonine;
+  final double tryptophan;
+  final double valine;
+
   Food({
     this.id,
     required this.emoji,
@@ -79,48 +90,75 @@ class Food {
     this.vitaminB6 = 0,
     this.vitaminB7 = 0,
     this.vitaminB9 = 0,
+    this.histidine = 0,
+    this.isoleucine = 0,
+    this.leucine = 0,
+    this.lysine = 0,
+    this.methionine = 0,
+    this.phenylalanine = 0,
+    this.threonine = 0,
+    this.tryptophan = 0,
+    this.valine = 0,
   });
 
   // Factory para construir un Food desde los datos de foods.dart
-  factory Food.fromData(Food baseFood, Map<String, double> nutrients) {
+  factory Food.fromData(Food baseFood, Map<String, dynamic> nutrients) {
+    // Función auxiliar para convertir a double de forma segura
+    double _toDouble(dynamic value) {
+      if (value == null) return 0;
+      if (value is double) return value;
+      if (value is int) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return Food(
       id: baseFood.id,
       emoji: baseFood.emoji,
       name: baseFood.name,
       fullName: baseFood.fullName,
-      calories: nutrients["Calorías"] ?? 0,
-      proteins: nutrients["Proteínas"] ?? 0,
-      carbohydrates: nutrients["Carbohidratos"] ?? 0,
-      fiber: nutrients["Fibra"] ?? 0,
-      totalSugars: nutrients["Azúcares totales"] ?? 0,
-      totalFats: nutrients["Grasas totales"] ?? 0,
-      saturatedFats: nutrients["Grasas saturadas"] ?? 0,
-      omega3: nutrients["Omega-3"] ?? 0,
-      omega6: nutrients["Omega-6"] ?? 0,
-      omega9: nutrients["Omega-9"] ?? 0,
-      calcium: nutrients["Calcio"] ?? 0,
-      iron: nutrients["Hierro"] ?? 0,
-      magnesium: nutrients["Magnesio"] ?? 0,
-      phosphorus: nutrients["Fósforo"] ?? 0,
-      potassium: nutrients["Potasio"] ?? 0,
-      sodium: nutrients["Sodio"] ?? 0,
-      zinc: nutrients["Zinc"] ?? 0,
-      copper: nutrients["Cobre"] ?? 0,
-      manganese: nutrients["Manganeso"] ?? 0,
-      selenium: nutrients["Selenio"] ?? 0,
-      iodine: nutrients["Yodo"] ?? 0,
-      vitaminA: nutrients["Vitamina A"] ?? 0,
-      vitaminC: nutrients["Vitamina C"] ?? 0,
-      vitaminE: nutrients["Vitamina E"] ?? 0,
-      vitaminK: nutrients["Vitamina K"] ?? 0,
-      vitaminB1: nutrients["Vitamina B1 (Tiamina)"] ?? 0,
-      vitaminB2: nutrients["Vitamina B2 (Riboflavina)"] ?? 0,
-      vitaminB3: nutrients["Vitamina B3 (Niacina)"] ?? 0,
-      vitaminB4: nutrients["Vitamina B4 (Colina)"] ?? 0,
-      vitaminB5: nutrients["Vitamina B5 (Ácido pantoténico)"] ?? 0,
-      vitaminB6: nutrients["Vitamina B6"] ?? 0,
-      vitaminB7: nutrients["Vitamina B7 (Biotina)"] ?? 0,
-      vitaminB9: nutrients["Vitamina B9 (Folato)"] ?? 0,
+      calories: _toDouble(nutrients["Calorías"]),
+      proteins: _toDouble(nutrients["Proteínas"]),
+      carbohydrates: _toDouble(nutrients["Carbohidratos"]),
+      fiber: _toDouble(nutrients["Fibra"]),
+      totalSugars: _toDouble(nutrients["Azúcares totales"]),
+      totalFats: _toDouble(nutrients["Grasas totales"]),
+      saturatedFats: _toDouble(nutrients["Grasas saturadas"]),
+      omega3: _toDouble(nutrients["Omega-3"]),
+      omega6: _toDouble(nutrients["Omega-6"]),
+      omega9: _toDouble(nutrients["Omega-9"]),
+      calcium: _toDouble(nutrients["Calcio"]),
+      iron: _toDouble(nutrients["Hierro"]),
+      magnesium: _toDouble(nutrients["Magnesio"]),
+      phosphorus: _toDouble(nutrients["Fósforo"]),
+      potassium: _toDouble(nutrients["Potasio"]),
+      sodium: _toDouble(nutrients["Sodio"]),
+      zinc: _toDouble(nutrients["Zinc"]),
+      copper: _toDouble(nutrients["Cobre"]),
+      manganese: _toDouble(nutrients["Manganeso"]),
+      selenium: _toDouble(nutrients["Selenio"]),
+      iodine: _toDouble(nutrients["Yodo"]),
+      vitaminA: _toDouble(nutrients["Vitamina A"]),
+      vitaminC: _toDouble(nutrients["Vitamina C"]),
+      vitaminE: _toDouble(nutrients["Vitamina E"]),
+      vitaminK: _toDouble(nutrients["Vitamina K"]),
+      vitaminB1: _toDouble(nutrients["Vitamina B1 (Tiamina)"]),
+      vitaminB2: _toDouble(nutrients["Vitamina B2 (Riboflavina)"]),
+      vitaminB3: _toDouble(nutrients["Vitamina B3 (Niacina)"]),
+      vitaminB4: _toDouble(nutrients["Vitamina B4 (Colina)"]),
+      vitaminB5: _toDouble(nutrients["Vitamina B5 (Ácido pantoténico)"]),
+      vitaminB6: _toDouble(nutrients["Vitamina B6"]),
+      vitaminB7: _toDouble(nutrients["Vitamina B7 (Biotina)"]),
+      vitaminB9: _toDouble(nutrients["Vitamina B9 (Folato)"]),
+      histidine: _toDouble(nutrients["Histidina"]),
+      isoleucine: _toDouble(nutrients["Isoleucina"]),
+      leucine: _toDouble(nutrients["Leucina"]),
+      lysine: _toDouble(nutrients["Lisina"]),
+      methionine: _toDouble(nutrients["Metionina"]),
+      phenylalanine: _toDouble(nutrients["Fenilalanina"]),
+      threonine: _toDouble(nutrients["Treonina"]),
+      tryptophan: _toDouble(nutrients["Triptófano"]),
+      valine: _toDouble(nutrients["Valina"]),
     );
   }
 }

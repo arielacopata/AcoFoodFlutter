@@ -9,6 +9,13 @@ class NutritionCalculator {
 
     for (final entry in entries) {
       final food = entry.food;
+
+      // Si es suplemento, procesar la dosis
+      if (entry.isSupplement) {
+        _processSupplementDose(totals, food.id, entry.supplementDose);
+        continue; // No procesar como alimento normal
+      }
+
       final scale = entry.grams / 100.0;
 
       _addToTotal(totals, 'calories', food.calories * scale);
@@ -44,6 +51,17 @@ class NutritionCalculator {
       _addToTotal(totals, 'vitaminB6', food.vitaminB6 * scale);
       _addToTotal(totals, 'vitaminB7', food.vitaminB7 * scale);
       _addToTotal(totals, 'vitaminB9', food.vitaminB9 * scale);
+
+      // Aminoácidos esenciales
+      _addToTotal(totals, 'histidine', food.histidine * scale);
+      _addToTotal(totals, 'isoleucine', food.isoleucine * scale);
+      _addToTotal(totals, 'leucine', food.leucine * scale);
+      _addToTotal(totals, 'lysine', food.lysine * scale);
+      _addToTotal(totals, 'methionine', food.methionine * scale);
+      _addToTotal(totals, 'phenylalanine', food.phenylalanine * scale);
+      _addToTotal(totals, 'threonine', food.threonine * scale);
+      _addToTotal(totals, 'tryptophan', food.tryptophan * scale);
+      _addToTotal(totals, 'valine', food.valine * scale);
     }
 
     return NutritionReport.fromMap(totals);
@@ -51,5 +69,32 @@ class NutritionCalculator {
 
   void _addToTotal(Map<String, double> map, String key, double value) {
     map[key] = (map[key] ?? 0) + value;
+  }
+
+  void _processSupplementDose(
+    Map<String, double> totals,
+    int? supplementId,
+    String? dose,
+  ) {
+    if (dose == null || supplementId == null) return;
+
+    // Extraer el número de la dosis (ej: "1000 mcg" -> 1000)
+    final numberMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+    if (numberMatch == null) return;
+
+    final value = double.parse(numberMatch.group(1)!);
+
+    switch (supplementId) {
+      case 9001: // B12
+        _addToTotal(totals, 'vitaminB12', value); // mcg
+        break;
+      case 9002: // Vitamina D
+        _addToTotal(totals, 'vitaminD', value); // UI
+        break;
+      case 9003: // Omega-3
+        // Asumir que viene en mg, convertir a g
+        _addToTotal(totals, 'omega3', value / 1000);
+        break;
+    }
   }
 }

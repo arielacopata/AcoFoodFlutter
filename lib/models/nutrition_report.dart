@@ -32,6 +32,19 @@ class NutritionReport {
   final double vitaminB7;
   final double vitaminB9;
   final double iodine;
+  final double vitaminB12;
+  final double vitaminD;
+
+  // Aminoácidos esenciales
+  final double histidine;
+  final double isoleucine;
+  final double leucine;
+  final double lysine;
+  final double methionine;
+  final double phenylalanine;
+  final double threonine;
+  final double tryptophan;
+  final double valine;
 
   NutritionReport({
     this.calories = 0,
@@ -67,6 +80,19 @@ class NutritionReport {
     this.vitaminB7 = 0,
     this.vitaminB9 = 0,
     this.iodine = 0,
+    this.vitaminB12 = 0,
+    this.vitaminD = 0,
+
+    // Agregar estos al constructor:
+    this.histidine = 0,
+    this.isoleucine = 0,
+    this.leucine = 0,
+    this.lysine = 0,
+    this.methionine = 0,
+    this.phenylalanine = 0,
+    this.threonine = 0,
+    this.tryptophan = 0,
+    this.valine = 0,
   });
 
   factory NutritionReport.fromMap(Map<String, double> totals) {
@@ -104,6 +130,19 @@ class NutritionReport {
       vitaminB7: totals['vitaminB7'] ?? 0,
       vitaminB9: totals['vitaminB9'] ?? 0,
       iodine: totals['iodine'] ?? 0,
+      vitaminB12: totals['vitaminB12'] ?? 0,
+      vitaminD: totals['vitaminD'] ?? 0,
+
+      // Agregar estos al factory:
+      histidine: totals['histidine'] ?? 0,
+      isoleucine: totals['isoleucine'] ?? 0,
+      leucine: totals['leucine'] ?? 0,
+      lysine: totals['lysine'] ?? 0,
+      methionine: totals['methionine'] ?? 0,
+      phenylalanine: totals['phenylalanine'] ?? 0,
+      threonine: totals['threonine'] ?? 0,
+      tryptophan: totals['tryptophan'] ?? 0,
+      valine: totals['valine'] ?? 0,
     );
   }
 }

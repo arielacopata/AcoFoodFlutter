@@ -61,13 +61,19 @@ class _BluetoothManagerState extends State<BluetoothManager> {
       for (var char in service.characteristics) {
         if (char.properties.notify) {
           await char.setNotifyValue(true);
-          char.onValueReceived.listen((value) {
-            if (value.length >= 5) {
-              int raw = (value[3] << 8) | value[4];
-              double grams = raw / 10.0;
-              widget.onWeightChanged(grams);
-            }
-          });
+char.onValueReceived.listen((value) {
+  if (value.length >= 6) {
+    int raw = (value[3] << 8) | value[4];
+    double grams = raw / 10.0;
+    
+    // byte[5]: 2 = positivo, 3 = negativo
+    if (value[5] == 3) {
+      grams = -grams;
+    }
+    
+    widget.onWeightChanged(grams);
+  }
+});
         }
       }
     }

@@ -11,6 +11,7 @@ class NutritionReportSheet extends StatelessWidget {
   final double proteinGoalGrams;
   final double carbsGoalGrams;
   final double fatGoalGrams;
+  final double userWeight;
 
   const NutritionReportSheet({
     super.key,
@@ -19,6 +20,7 @@ class NutritionReportSheet extends StatelessWidget {
     required this.proteinGoalGrams,
     required this.carbsGoalGrams,
     required this.fatGoalGrams,
+    this.userWeight = 70.0, // Default 70kg
   });
 
   static const List<String> nutrientOrder = [
@@ -41,6 +43,8 @@ class NutritionReportSheet extends StatelessWidget {
     'vitaminB4',
     'vitaminB5',
     'vitaminB7',
+    'vitaminB12',
+    'vitaminD',
     'calcium',
     'iron',
     'magnesium',
@@ -52,6 +56,15 @@ class NutritionReportSheet extends StatelessWidget {
     'manganese',
     'selenium',
     'iodine',
+    'histidine',
+    'isoleucine',
+    'leucine',
+    'lysine',
+    'methionine',
+    'phenylalanine',
+    'threonine',
+    'tryptophan',
+    'valine',
   ];
 
   @override
@@ -123,6 +136,15 @@ class NutritionReportSheet extends StatelessWidget {
       goalData = {'value': fatGoalGrams, 'unit': 'g', 'type': 'Meta'};
     } else {
       goalData = nutrientGoals[nutrientKey];
+
+      // Convertir aminoácidos de mg/kg/day a gramos totales
+      if (goalData != null && goalData['unit'] == 'mg/kg/day') {
+        final mgPerKg = goalData['value'] as double;
+        final totalMg = mgPerKg * userWeight;
+        final totalGrams = totalMg / 1000; // convertir mg a g
+
+        goalData = {'value': totalGrams, 'unit': 'g', 'type': goalData['type']};
+      }
     }
 
     if (goalData == null) return null;
@@ -158,9 +180,45 @@ class NutritionReportSheet extends StatelessWidget {
       'vitaminB6': "Vitamina B6",
       'vitaminB7': "Vitamina B7 (Biotina)",
       'vitaminB9': "Vitamina B9 (Folato)",
+      'vitaminB12': "Vitamina B12",
+      'vitaminD': "Vitamina D",
       'iodine': "Yodo",
+      'histidine': "Histidina",
+      'isoleucine': "Isoleucina",
+      'leucine': "Leucina",
+      'lysine': "Lisina",
+      'methionine': "Metionina",
+      'phenylalanine': "Fenilalanina",
+      'threonine': "Treonina",
+      'tryptophan': "Triptófano",
+      'valine': "Valina",
     };
 
+    // Agregar divisor antes del primer aminoácido
+    if (nutrientKey == 'histidine') {
+      return Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12.0),
+            child: Divider(thickness: 2),
+          ),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              'Aminoácidos Esenciales',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ),
+          NutrientProgressRow(
+            name: nutrientNameMapping[nutrientKey] ?? "Desconocido",
+            value: value,
+            goal: goalData['value'],
+            unit: goalData['unit'],
+            type: goalData['type'],
+          ),
+        ],
+      );
+    }
     return NutrientProgressRow(
       name: nutrientNameMapping[nutrientKey] ?? "Desconocido",
       value: value,
@@ -232,8 +290,30 @@ class NutritionReportSheet extends StatelessWidget {
         return report.vitaminB7;
       case 'vitaminB9':
         return report.vitaminB9;
+      case 'vitaminB12':
+        return report.vitaminB12;
+      case 'vitaminD':
+        return report.vitaminD;
       case 'iodine':
         return report.iodine;
+      case 'histidine':
+        return report.histidine;
+      case 'isoleucine':
+        return report.isoleucine;
+      case 'leucine':
+        return report.leucine;
+      case 'lysine':
+        return report.lysine;
+      case 'methionine':
+        return report.methionine;
+      case 'phenylalanine':
+        return report.phenylalanine;
+      case 'threonine':
+        return report.threonine;
+      case 'tryptophan':
+        return report.tryptophan;
+      case 'valine':
+        return report.valine;
       default:
         return 0.0;
     }

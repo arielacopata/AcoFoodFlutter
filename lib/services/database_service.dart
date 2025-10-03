@@ -6,6 +6,7 @@ import '../models/user_profile.dart';
 import 'food_repository.dart';
 import '../models/habit.dart';
 import '../models/dashboard_stats.dart';
+import '../data/supplements_data.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -42,7 +43,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 11, // 👈 subí la versión para que dispare onUpgrade
+      version: 12, // 👈 subí la versión para que dispare onUpgrade
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -54,7 +55,9 @@ class DatabaseService {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       foodId INTEGER NOT NULL,
       grams REAL NOT NULL,
-      timestamp TEXT NOT NULL
+      timestamp TEXT NOT NULL,
+      isSupplement INTEGER DEFAULT 0,
+      supplementDose TEXT
     )
   ''');
 
@@ -207,14 +210,22 @@ class DatabaseService {
       }
     }
 
-      if (oldVersion < 11) {
-        await db.execute('''
+    if (oldVersion < 11) {
+      await db.execute('''
           ALTER TABLE user_profile ADD COLUMN goalType TEXT
         ''');
-        await db.execute('''
+      await db.execute('''
           ALTER TABLE user_profile ADD COLUMN goalCalories INTEGER
         ''');
-        }
+    }
+
+    if (oldVersion < 12) {
+      // Agregar columnas para suplementos
+      await db.execute(
+        'ALTER TABLE history ADD COLUMN isSupplement INTEGER DEFAULT 0',
+      );
+      await db.execute('ALTER TABLE history ADD COLUMN supplementDose TEXT');
+    }
   }
 
   // Obtener todos los hábitos habilitados
@@ -372,7 +383,19 @@ class DatabaseService {
 
     List<FoodEntry> entries = [];
     for (var map in maps) {
-      final food = FoodRepository().getFoodById(map['foodId']);
+      var food = FoodRepository().getFoodById(map['foodId']);
+
+      // Si es suplemento, buscar en supplementsList
+      if ((map['isSupplement'] ?? 0) == 1) {
+        food = supplementsList.firstWhere(
+          (s) => s.id == map['foodId'],
+          orElse: () => FoodRepository().getFoodById(map['foodId'])!,
+        );
+      } else {
+        // Si es alimento normal, buscar en FoodRepository
+        food = FoodRepository().getFoodById(map['foodId']);
+      }
+
       if (food != null) {
         entries.add(
           FoodEntry(
@@ -380,6 +403,9 @@ class DatabaseService {
             food: food,
             grams: map['grams'],
             timestamp: DateTime.parse(map['timestamp']),
+            isSupplement:
+                (map['isSupplement'] ?? 0) == 1, // Leer el campo nuevo
+            supplementDose: map['supplementDose'], // Leer el campo nuevo
           ),
         );
       }
@@ -389,15 +415,15 @@ class DatabaseService {
   }
 
   // Método para actualizar un entry existente
-Future<int> updateEntry(FoodEntry entry) async {
-   final db = await instance.database;
-  return await db.update(
-    'history',
-    entry.toMapForUpdate(),  // ✅ Sin incluir id
-    where: 'id = ?',
-    whereArgs: [entry.id],
-  );
-}
+  Future<int> updateEntry(FoodEntry entry) async {
+    final db = await instance.database;
+    return await db.update(
+      'history',
+      entry.toMapForUpdate(), // ✅ Sin incluir id
+      where: 'id = ?',
+      whereArgs: [entry.id],
+    );
+  }
 
   // Método para eliminar un entry
   Future<int> deleteEntry(int id) async {
@@ -432,121 +458,140 @@ Future<int> updateEntry(FoodEntry entry) async {
     );
   }
 
-Future<DashboardStats> getDashboardStats(DateTime startDate, DateTime endDate) async {
-  final db = await database;
-  
-  // Obtener todas las entradas del período
-  final entries = await db.query(
-    'history',
-    where: 'timestamp >= ? AND timestamp < ?',
-    whereArgs: [startDate.toIso8601String(), endDate.add(const Duration(days: 1)).toIso8601String()],
-  );
-  
-  // Agrupar por día
-  Map<String, List<Map<String, dynamic>>> entriesByDay = {};
-  for (var entry in entries) {
-    final date = DateTime.parse(entry['timestamp'] as String);
-    final dateKey = DateTime(date.year, date.month, date.day).toIso8601String().split('T')[0];
-    entriesByDay.putIfAbsent(dateKey, () => []).add(entry);
-  }
-  
-  // Calcular datos diarios
-  List<DailyData> dailyData = [];
-  double totalCalories = 0;
-  double totalProtein = 0;
-  double totalCarbs = 0;
-  double totalFat = 0;
-  
-  final foodRepo = FoodRepository();
-  
-  for (var dateKey in entriesByDay.keys) {
-    double dayCalories = 0;
-    
-    for (var entry in entriesByDay[dateKey]!) {
-      final food = foodRepo.getFoodById(entry['foodId'] as int);
-      if (food != null) {
-        final grams = entry['grams'] as double;
-        final scale = grams / 100;
-        dayCalories += food.calories * scale;
-        totalProtein += food.proteins * scale;
-        totalCarbs += food.carbohydrates * scale;
-        totalFat += food.totalFats * scale;
-      }
-    }
-    
-    totalCalories += dayCalories;
-    dailyData.add(DailyData(
-      date: DateTime.parse(dateKey),
-      calories: dayCalories,
-    ));
-  }
-  
-  final daysCount = entriesByDay.length > 0 ? entriesByDay.length : 1;
-  
-  // Top alimentos
-  Map<int, TopFood> foodStats = {};
-  for (var entry in entries) {
-    final foodId = entry['foodId'] as int;
-    final grams = entry['grams'] as double;
-    final food = foodRepo.getFoodById(foodId);
-    
-    if (food != null) {
-      if (foodStats.containsKey(foodId)) {
-        foodStats[foodId] = TopFood(
-          name: food.name,
-          emoji: food.emoji,
-          timesConsumed: foodStats[foodId]!.timesConsumed + 1,
-          totalGrams: foodStats[foodId]!.totalGrams + grams,
-        );
-      } else {
-        foodStats[foodId] = TopFood(
-          name: food.name,
-          emoji: food.emoji,
-          timesConsumed: 1,
-          totalGrams: grams,
-        );
-      }
-    }
-  }
-  
-  final topFoods = foodStats.values.toList()
-    ..sort((a, b) => b.timesConsumed.compareTo(a.timesConsumed))
-    ..take(5).toList();
-  
-  // Completitud de hábitos
-  final habits = await db.query('habits');
-  Map<String, int> habitCompletion = {};
-  
-  for (var habit in habits) {
-    final habitId = habit['id'] as int;
-    final habitName = habit['name'] as String;
-    
-    final logs = await db.query(
-      'habit_logs',
-      where: 'habitId = ? AND timestamp >= ? AND timestamp < ?',
-      whereArgs: [habitId, startDate.toIso8601String(), endDate.add(const Duration(days: 1)).toIso8601String()],
-    );
-    
-    // Contar días únicos
-    final uniqueDays = logs.map((log) {
-      final date = DateTime.parse(log['timestamp'] as String);
-      return DateTime(date.year, date.month, date.day).toIso8601String().split('T')[0];
-    }).toSet().length;
-    
-    habitCompletion[habitName] = uniqueDays;
-  }
-  
-  return DashboardStats(
-    startDate: startDate,
-    endDate: endDate,
-    avgCalories: totalCalories / daysCount,
-    avgProtein: totalProtein / daysCount,
-    avgCarbs: totalCarbs / daysCount,
-    avgFat: totalFat / daysCount,
-    dailyData: dailyData,
-    topFoods: topFoods,
-    habitCompletion: habitCompletion,
-  );
-}
+  Future<DashboardStats> getDashboardStats(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final db = await database;
 
+    // Obtener todas las entradas del período
+    final entries = await db.query(
+      'history',
+      where: 'timestamp >= ? AND timestamp < ?',
+      whereArgs: [
+        startDate.toIso8601String(),
+        endDate.add(const Duration(days: 1)).toIso8601String(),
+      ],
+    );
+
+    // Agrupar por día
+    Map<String, List<Map<String, dynamic>>> entriesByDay = {};
+    for (var entry in entries) {
+      final date = DateTime.parse(entry['timestamp'] as String);
+      final dateKey = DateTime(
+        date.year,
+        date.month,
+        date.day,
+      ).toIso8601String().split('T')[0];
+      entriesByDay.putIfAbsent(dateKey, () => []).add(entry);
+    }
+
+    // Calcular datos diarios
+    List<DailyData> dailyData = [];
+    double totalCalories = 0;
+    double totalProtein = 0;
+    double totalCarbs = 0;
+    double totalFat = 0;
+
+    final foodRepo = FoodRepository();
+
+    for (var dateKey in entriesByDay.keys) {
+      double dayCalories = 0;
+
+      for (var entry in entriesByDay[dateKey]!) {
+        final food = foodRepo.getFoodById(entry['foodId'] as int);
+        if (food != null) {
+          final grams = entry['grams'] as double;
+          final scale = grams / 100;
+          dayCalories += food.calories * scale;
+          totalProtein += food.proteins * scale;
+          totalCarbs += food.carbohydrates * scale;
+          totalFat += food.totalFats * scale;
+        }
+      }
+
+      totalCalories += dayCalories;
+      dailyData.add(
+        DailyData(date: DateTime.parse(dateKey), calories: dayCalories),
+      );
+    }
+
+    final daysCount = entriesByDay.length > 0 ? entriesByDay.length : 1;
+
+    // Top alimentos
+    Map<int, TopFood> foodStats = {};
+    for (var entry in entries) {
+      final foodId = entry['foodId'] as int;
+      final grams = entry['grams'] as double;
+      final food = foodRepo.getFoodById(foodId);
+
+      if (food != null) {
+        if (foodStats.containsKey(foodId)) {
+          foodStats[foodId] = TopFood(
+            name: food.name,
+            emoji: food.emoji,
+            timesConsumed: foodStats[foodId]!.timesConsumed + 1,
+            totalGrams: foodStats[foodId]!.totalGrams + grams,
+          );
+        } else {
+          foodStats[foodId] = TopFood(
+            name: food.name,
+            emoji: food.emoji,
+            timesConsumed: 1,
+            totalGrams: grams,
+          );
+        }
+      }
+    }
+
+    final topFoods = foodStats.values.toList()
+      ..sort((a, b) => b.timesConsumed.compareTo(a.timesConsumed))
+      ..take(5).toList();
+
+    // Completitud de hábitos
+    final habits = await db.query('habits');
+    Map<String, int> habitCompletion = {};
+
+    for (var habit in habits) {
+      final habitId = habit['id'] as int;
+      final habitName = habit['name'] as String;
+
+      final logs = await db.query(
+        'habit_logs',
+        where: 'habitId = ? AND timestamp >= ? AND timestamp < ?',
+        whereArgs: [
+          habitId,
+          startDate.toIso8601String(),
+          endDate.add(const Duration(days: 1)).toIso8601String(),
+        ],
+      );
+
+      // Contar días únicos
+      final uniqueDays = logs
+          .map((log) {
+            final date = DateTime.parse(log['timestamp'] as String);
+            return DateTime(
+              date.year,
+              date.month,
+              date.day,
+            ).toIso8601String().split('T')[0];
+          })
+          .toSet()
+          .length;
+
+      habitCompletion[habitName] = uniqueDays;
+    }
+
+    return DashboardStats(
+      startDate: startDate,
+      endDate: endDate,
+      avgCalories: totalCalories / daysCount,
+      avgProtein: totalProtein / daysCount,
+      avgCarbs: totalCarbs / daysCount,
+      avgFat: totalFat / daysCount,
+      dailyData: dailyData,
+      topFoods: topFoods,
+      habitCompletion: habitCompletion,
+    );
+  }
 }

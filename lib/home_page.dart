@@ -27,6 +27,7 @@ import 'widgets/habits_modal.dart';
 import 'models/habit.dart';
 import 'screens/dashboard_screen.dart';
 import '../models/dashboard_stats.dart';
+import 'data/supplements_data.dart';
 
 final StreamController<double> _weightController = StreamController.broadcast();
 bool _isScaleConnected = false; // Agregar esta variabl
@@ -97,6 +98,141 @@ class _HomePageState extends State<HomePage> {
     _buildDisplayGroups(); // Reconstruir con el nuevo orden
   }
 
+  Future<bool?> _openSupplementSheet(Food supplement) async {
+    _searchFocusNode.unfocus();
+
+    final result = await showModalBottomSheet<Map<String, dynamic>?>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => _buildSupplementModal(supplement),
+    );
+
+    print('DEBUG: result = $result'); // 👈 AGREGAR
+
+    if (result != null && result['dose'] != null) {
+      final entry = FoodEntry(
+        food: supplement,
+        grams: 0,
+        isSupplement: true,
+        supplementDose: result['dose'],
+      );
+
+      print(
+        'DEBUG: Guardando entry: ${entry.food.name}, dosis: ${entry.supplementDose}, isSupplement: ${entry.isSupplement}',
+      ); // 👈 AGREGAR
+
+      await DatabaseService.instance.createEntry(entry);
+
+      print('DEBUG: Entry guardado, recargando historial'); // 👈 AGREGAR
+      _loadHistory();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${supplement.name} registrado: ${result['dose']}'),
+        ),
+      );
+      return true;
+    }
+    return false;
+  }
+
+  Widget _buildSupplementModal(Food supplement) {
+    final doseController = TextEditingController();
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Text(
+                      '${supplement.emoji}  ${supplement.name}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Si es B12, mostrar botones rápidos
+                if (supplement.id == 9001) ...[
+                  const Text(
+                    'Dosis común:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _quickDoseButton(context, '500 mcg'),
+                      _quickDoseButton(context, '1000 mcg'),
+                      _quickDoseButton(context, '3500 mcg'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                ],
+
+                // Input libre
+                const Text(
+                  'Dosis personalizada:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: doseController,
+                        decoration: const InputDecoration(
+                          hintText: 'Ej: 2 cápsulas, 2000 UI',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (doseController.text.isNotEmpty) {
+                          Navigator.pop(context, {'dose': doseController.text});
+                        }
+                      },
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _quickDoseButton(BuildContext context, String dose) {
+    return ElevatedButton(
+      onPressed: () => Navigator.pop(context, {'dose': dose}),
+      child: Text(dose),
+    );
+  }
+
   // Mostrar modal de In/Out
   void _showInOutModal() {
     showModalBottomSheet(
@@ -145,14 +281,14 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             //    ListTile(
-              //        leading: const Icon(Icons.upload_file),
-                //      title: const Text('Restaurar desde Archivo'),
-                  //    onTap: () async {
-                    //    // Aquí irá la lógica para seleccionar archivo
-                      //  Navigator.pop(context);
-                        //_importBackup();
-                      //},
-           //         ),
+            //        leading: const Icon(Icons.upload_file),
+            //      title: const Text('Restaurar desde Archivo'),
+            //    onTap: () async {
+            //    // Aquí irá la lógica para seleccionar archivo
+            //  Navigator.pop(context);
+            //_importBackup();
+            //},
+            //         ),
             // const SizedBox(height: 24),
             // const Text(
             //   'IMPORTAR DATOS',
@@ -247,41 +383,46 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-Future<void> _importBackup() async {
-  // Por ahora mostrar diálogo de confirmación
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Restaurar Backup'),
-      content: const Text('Esto sobrescribirá todos tus datos actuales. ¿Continuar?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
+  Future<void> _importBackup() async {
+    // Por ahora mostrar diálogo de confirmación
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restaurar Backup'),
+        content: const Text(
+          'Esto sobrescribirá todos tus datos actuales. ¿Continuar?',
         ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Restaurar'),
-        ),
-      ],
-    ),
-  );
-  
-  if (confirm != true) return;
-  
-  // TODO: Implementar selector de archivo
-  // Por ahora solo la estructura
-}
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Restaurar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // TODO: Implementar selector de archivo
+    // Por ahora solo la estructura
+  }
 
   Future<void> _loadDailyReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final todayKey = _getTodayKey(); // 👈 Usar el mismo método
 
     setState(() {
       // Estados diarios (se resetean)
-      _b12Completed = prefs.getBool('b12_$today') ?? false;
-      _linoCompleted = prefs.getBool('lino_$today') ?? false;
-      _legumbresCompleted = prefs.getBool('legumbres_$today') ?? false;
+      _b12Completed =
+          prefs.getBool('b12_completed_$todayKey') ??
+          false; // 👈 Agregar _completed
+      _linoCompleted = prefs.getBool('lino_completed_$todayKey') ?? false;
+      _legumbresCompleted =
+          prefs.getBool('legumbres_completed_$todayKey') ?? false;
 
       // Estados habilitados (permanentes)
       _b12Enabled = prefs.getBool('b12_enabled') ?? true;
@@ -290,22 +431,33 @@ Future<void> _importBackup() async {
     });
   }
 
-  Future<void> _toggleReminder(String reminder) async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().split('T')[0];
-
-    setState(() {
-      if (reminder == 'b12') {
-        _b12Completed = true;
-        prefs.setBool('b12_$today', true);
-      } else if (reminder == 'lino') {
-        _linoCompleted = true;
-        prefs.setBool('lino_$today', true);
-      } else if (reminder == 'legumbres') {
-        _legumbresCompleted = true;
-        prefs.setBool('legumbres_$today', true);
+  void _toggleReminder(String key) async {
+    if (key == 'b12') {
+      // Abrir modal de B12 en lugar de solo marcar como completado
+      final b12Supplement = supplementsList.firstWhere((s) => s.id == 9001);
+      final wasRegistered = await _openSupplementSheet(
+        b12Supplement,
+      ); // 👈 Declarar acá
+      // Marcar como completado
+      // Solo marcar como completado SI se registró
+      if (wasRegistered == true) {
+        // 👈 CAMBIAR
+        setState(() => _b12Completed = true);
+        final prefs = await SharedPreferences.getInstance();
+        final todayKey = _getTodayKey();
+        await prefs.setBool('b12_completed_$todayKey', true);
       }
-    });
+    } else if (key == 'lino') {
+      setState(() => _linoCompleted = true);
+      final prefs = await SharedPreferences.getInstance();
+      final todayKey = _getTodayKey();
+      await prefs.setBool('lino_completed_$todayKey', true);
+    } else if (key == 'legumbres') {
+      setState(() => _legumbresCompleted = true);
+      final prefs = await SharedPreferences.getInstance();
+      final todayKey = _getTodayKey();
+      await prefs.setBool('legumbres_completed_$todayKey', true);
+    }
   }
 
   Widget _buildReminderBanner() {
@@ -382,8 +534,8 @@ Future<void> _importBackup() async {
   // Modifica _exportAsJson para usar share en lugar de guardar
   Future<void> _exportAsJson() async {
     try {
-        final jsonContent = await ExportService.generateJsonBackup(_history);
-        await ExportService.shareJsonFile(jsonContent);
+      final jsonContent = await ExportService.generateJsonBackup(_history);
+      await ExportService.shareJsonFile(jsonContent);
 
       if (mounted) {
         Navigator.pop(context);
@@ -483,7 +635,7 @@ Future<void> _importBackup() async {
 
   // Función para editar la cantidad de un entry
   Future<void> _editEntry(FoodEntry entry) async {
-      final newGrams = await showModalBottomSheet<double?>(
+    final newGrams = await showModalBottomSheet<double?>(
       context: context,
       builder: (ctx) => FoodAmountSheet(
         food: entry.food,
@@ -615,10 +767,10 @@ Future<void> _importBackup() async {
   }
 
   Future<void> _loadHistory() async {
-     final entries = await DatabaseService.instance.getEntriesByDate(
+    final entries = await DatabaseService.instance.getEntriesByDate(
       _selectedDate,
     );
-      setState(() {
+    setState(() {
       _history = entries;
     });
     _recalculateTotals(); // Recalculamos al cargar
@@ -653,6 +805,11 @@ Future<void> _importBackup() async {
     }
   }
 
+  String _getTodayKey() {
+    final now = DateTime.now();
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
   void _setTare() {
     setState(() {
       _tareWeight = _weight;
@@ -676,13 +833,13 @@ Future<void> _importBackup() async {
     // Si no hay nada en el historial, reseteamos el reporte.
     if (_history.isEmpty) {
       setState(() => _currentReport = null);
-     // print("Historial vacío, reporte reseteado.");
+      // print("Historial vacío, reporte reseteado.");
       return;
     }
-    
+
     // Llamamos a nuestro calculador
     final report = await _calculator.calculateDailyTotals(_history);
-    
+
     setState(() {
       _currentReport = report;
     });
@@ -715,6 +872,7 @@ Future<void> _importBackup() async {
         ); // 👈 Agregar esto
 
         // Recarga el historial desde la base de datos para tener todo sincronizado
+        _setTare();
         _loadHistory();
       }
     }
@@ -768,16 +926,17 @@ Future<void> _importBackup() async {
     // (La ponemos aquí mismo para tener todo a mano)
 
     // 1. Calorías objetivo calculadas según el perfil
-    final double totalCaloriesGoal = widget.profile.goalCalories?.toDouble() ??
-    CalorieCalculator.calculateRecommendedCalories(
-      dob: widget.profile.dob,
-      gender: widget.profile.gender,
-      weight: widget.profile.weight,
-      height: widget.profile.height,
-      lifestyle: widget.profile.lifestyle,
-      exerciseLevel: widget.profile.exerciseLevel,
-      expenditure: widget.profile.expenditure,
-    );
+    final double totalCaloriesGoal =
+        widget.profile.goalCalories?.toDouble() ??
+        CalorieCalculator.calculateRecommendedCalories(
+          dob: widget.profile.dob,
+          gender: widget.profile.gender,
+          weight: widget.profile.weight,
+          height: widget.profile.height,
+          lifestyle: widget.profile.lifestyle,
+          exerciseLevel: widget.profile.exerciseLevel,
+          expenditure: widget.profile.expenditure,
+        );
 
     // 2. Calculamos los gramos objetivo para cada macro
     final double proteinGoalGrams =
@@ -809,20 +968,20 @@ Future<void> _importBackup() async {
       child: Scaffold(
         appBar: AppBar(
           title: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _isListView = !_isListView;
-                      });
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('AcoFood'),
-                        const SizedBox(width: 8),
-                        Icon(_isListView ? Icons.list : Icons.grid_view, size: 20),
-                      ],
-                    ),
-                  ),
+            onTap: () {
+              setState(() {
+                _isListView = !_isListView;
+              });
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('AcoFood'),
+                const SizedBox(width: 8),
+                Icon(_isListView ? Icons.list : Icons.grid_view, size: 20),
+              ],
+            ),
+          ),
           actions: [
             IconButton(
               icon: const Icon(Icons.task_alt),
@@ -836,14 +995,14 @@ Future<void> _importBackup() async {
               },
             ),
             IconButton(
-                icon: const Icon(Icons.dashboard),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => DashboardScreen()),
-                  );
-                },
-              ),
+              icon: const Icon(Icons.dashboard),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => DashboardScreen()),
+                );
+              },
+            ),
             IconButton(
               icon: const Icon(Icons.brightness_6),
               onPressed: widget.onToggleTheme,
@@ -901,6 +1060,9 @@ Future<void> _importBackup() async {
                           const Spacer(),
                           BluetoothManager(
                             onWeightChanged: (grams) {
+                              print(
+                                'DEBUG: Peso recibido = $grams',
+                              ); // 👈 AGREGAR ESTO
                               setState(() => _weight = grams);
                               _weightController.add(grams);
                             },
@@ -918,7 +1080,7 @@ Future<void> _importBackup() async {
                                 ),
                                 minimumSize: const Size(0, 32),
                               ),
-                              onPressed: _weight > 0 ? _setTare : null,
+                              onPressed: _weight != 0 ? _setTare : null,
                               icon: const Icon(Icons.exposure_zero, size: 16),
                               label: const Text(
                                 'TARA',
@@ -959,7 +1121,7 @@ Future<void> _importBackup() async {
                       padding: const EdgeInsets.all(12), // Reducir de 16 a 12
                       child: Column(
                         children: [
-                          if (_tareWeight > 0)
+                          if (_tareWeight != 0)
                             Text(
                               "Bruto: ${_weight.toStringAsFixed(1)} g",
                               style: const TextStyle(
@@ -985,122 +1147,158 @@ Future<void> _importBackup() async {
 
             // Grid de alimentos
             Expanded(
-              child: 
-              _isListView
-  ? ListView.builder(
-      itemCount: _displayGroups.length,
-      itemBuilder: (context, index) {
-        final group = _displayGroups[index];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header de categoría
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                '${group.emoji} ${group.groupName}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            // Lista compacta de alimentos
-            ...group.items.map((food) => ListTile(
-              dense: true,
-              leading: Text(
-                food.emoji,
-                style: const TextStyle(fontSize: 24),
-              ),
-              title: Text(food.name),
-              subtitle: Text('${food.calories} kcal/100g'),
-              trailing: Text(
-                '${food.proteins.toStringAsFixed(1)}P • ${food.carbohydrates.toStringAsFixed(1)}C • ${food.totalFats.toStringAsFixed(1)}G',
-                style: const TextStyle(fontSize: 11),
-              ),
-              onTap: () => _openFoodBottomSheet(food),
-            )),
-          ],
-        );
-      },
-    )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: _getCrossAxisCount(context), // 👈 CAMBIAR AQUÍ
-                      crossAxisSpacing: 6,
-                      mainAxisSpacing: 6,
-                    ),
-                // 5. ¡AQUÍ USAMOS LA VARIABLE!
-                itemCount: displayItems.length,
-                itemBuilder: (context, index) {
-                  final item = displayItems[index];
-
-                  // 6. RENDERIZADO INTELIGENTE
-                  if (item is FoodGroupDisplay) {
-                    // Si el item es un Grupo, lo mostramos como grupo
-                    return InkWell(
-                      onTap: () {
-                        if (item.hasMultiple) {
-                          _showVariantDialog(item);
-                        } else {
-                          _openFoodBottomSheet(item.items.first);
-                        }
+              child: _isListView
+                  ? ListView.builder(
+                      itemCount: _displayGroups.length,
+                      itemBuilder: (context, index) {
+                        final group = _displayGroups[index];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header de categoría
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                              child: Text(
+                                '${group.emoji} ${group.groupName}',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            // Lista compacta de alimentos
+                            ...group.items.map(
+                              (food) => ListTile(
+                                dense: true,
+                                leading: Text(
+                                  food.emoji,
+                                  style: const TextStyle(fontSize: 24),
+                                ),
+                                title: Text(food.name),
+                                subtitle: Text('${food.calories} kcal/100g'),
+                                trailing: Text(
+                                  '${food.proteins.toStringAsFixed(1)}P • ${food.carbohydrates.toStringAsFixed(1)}C • ${food.totalFats.toStringAsFixed(1)}G',
+                                  style: const TextStyle(fontSize: 11),
+                                ),
+                                onTap: () => _openFoodBottomSheet(food),
+                              ),
+                            ),
+                          ],
+                        );
                       },
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                item.emoji,
-                                style: const TextStyle(fontSize: 28),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                item.groupName,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.all(16),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _getCrossAxisCount(
+                          context,
+                        ), // 👈 CAMBIAR AQUÍ
+                        crossAxisSpacing: 6,
+                        mainAxisSpacing: 6,
+                      ),
+
+                      // 5. ¡AQUÍ USAMOS LA VARIABLE!
+                      itemCount: displayItems.length + supplementsList.length,
+                      itemBuilder: (context, index) {
+                        if (index < displayItems.length) {
+                          final item = displayItems[index];
+
+                          // 6. RENDERIZADO INTELIGENTE
+                          if (item is FoodGroupDisplay) {
+                            // Si el item es un Grupo, lo mostramos como grupo
+                            return InkWell(
+                              onTap: () {
+                                if (item.hasMultiple) {
+                                  _showVariantDialog(item);
+                                } else {
+                                  _openFoodBottomSheet(item.items.first);
+                                }
+                              },
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        item.emoji,
+                                        style: const TextStyle(fontSize: 28),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.groupName,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  } else if (item is Food) {
-                    // Si el item es un Alimento (de la búsqueda), lo mostramos individualmente
-                    return InkWell(
-                      onTap: () => _openFoodBottomSheet(item),
-                      child: Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                item.emoji,
-                                style: const TextStyle(fontSize: 28),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                item.name,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                            );
+                          } else if (item is Food) {
+                            // Si el item es un Alimento (de la búsqueda), lo mostramos individualmente
+                            return InkWell(
+                              onTap: () => _openFoodBottomSheet(item),
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        item.emoji,
+                                        style: const TextStyle(fontSize: 28),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.name,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink(); // Fallback por si acaso
-                },
-              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        } // Cierra el if (index < displayItems.length)
+                        else {
+                          // Es un suplemento
+                          final supplement =
+                              supplementsList[index - displayItems.length];
+                          return GestureDetector(
+                            onTap: () => _openSupplementSheet(supplement),
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      supplement.emoji,
+                                      style: const TextStyle(fontSize: 24),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      supplement.name,
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(fontSize: 10),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        } // Fallback por si acaso
+                      },
+                    ),
             ),
 
             if (!_isSearchFocused)
@@ -1176,6 +1374,9 @@ Future<void> _importBackup() async {
                                                   carbsGoalGrams:
                                                       carbsGoalGrams,
                                                   fatGoalGrams: fatGoalGrams,
+                                                  userWeight:
+                                                      widget.profile.weight ??
+                                                      70.0,
                                                 ),
                                           );
                                         }
@@ -1284,7 +1485,9 @@ Future<void> _importBackup() async {
                       Container(
                         constraints: const BoxConstraints(maxHeight: 200),
                         child: ListView.builder(
-                          key: ValueKey('list_${_history.length}_${_history.hashCode}'),
+                          key: ValueKey(
+                            'list_${_history.length}_${_history.hashCode}',
+                          ),
                           shrinkWrap: true,
                           itemCount: _history.length,
                           itemBuilder: (context, index) {
@@ -1295,10 +1498,14 @@ Future<void> _importBackup() async {
                                 style: const TextStyle(fontSize: 24),
                               ),
                               title: Text(
-                                "${entry.food.fullName} - ${entry.grams.toStringAsFixed(1)} g",
+                                entry.isSupplement
+                                    ? "${entry.food.name} - ${entry.supplementDose}" // 👈 Para suplementos: mostrar dosis
+                                    : "${entry.food.fullName} - ${entry.grams.toStringAsFixed(1)} g", // Para alimentos: gramos
                               ),
                               subtitle: Text(
-                                "${(entry.food.calories * entry.grams / 100).toStringAsFixed(0)} kcal", // 👈 Calorías de la cantidad real
+                                entry.isSupplement
+                                    ? "Suplemento" // 👈 Para suplementos: texto simple
+                                    : "${(entry.food.calories * entry.grams / 100).toStringAsFixed(0)} kcal", // Para alimentos: calorías
                               ),
                               trailing: PopupMenuButton<String>(
                                 icon: const Icon(Icons.more_vert),
@@ -1411,20 +1618,21 @@ Future<void> _importBackup() async {
       ),
     );
   }
+
   int _getCrossAxisCount(BuildContext context) {
-  final width = MediaQuery.of(context).size.width;
-  
-  // Tablet 2K en portrait (ancho > 768px)
-  if (width >= 768) {
-    return 5; // 5 columnas para tablets
+    final width = MediaQuery.of(context).size.width;
+
+    // Tablet 2K en portrait (ancho > 768px)
+    if (width >= 768) {
+      return 5; // 5 columnas para tablets
+    }
+
+    // Tablet mediana (ancho entre 600-768px)
+    if (width >= 600) {
+      return 4; // 4 columnas para tablets medianas
+    }
+
+    // Mobile (ancho < 600px)
+    return 3; // 3 columnas para móviles
   }
-  
-  // Tablet mediana (ancho entre 600-768px)
-  if (width >= 600) {
-    return 4; // 4 columnas para tablets medianas
-  }
-  
-  // Mobile (ancho < 600px)
-  return 3; // 3 columnas para móviles
-}
 }
