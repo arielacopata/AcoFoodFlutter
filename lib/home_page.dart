@@ -814,12 +814,16 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _tareWeight = _weight;
     });
+
+      // Solo mostrar snackbar si la balanza está conectada
+  if (_isScaleConnected) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Tara establecida: ${_weight.toStringAsFixed(1)}g'),
         duration: const Duration(seconds: 2),
       ),
     );
+    }
   }
 
   void _resetTare() {
