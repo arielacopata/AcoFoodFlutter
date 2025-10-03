@@ -58,7 +58,7 @@ class _FoodAmountSheetState extends State<FoodAmountSheet> {
                 Row(
                   children: [
                     Text(
-                      "${widget.food.emoji}  ${widget.food.name}",
+                      "${widget.food.emoji}  ${widget.food.fullName ?? widget.food.name}",
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
