@@ -12,6 +12,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   String _selectedPeriod = '7days';
+  String _selectedMacro = 'calories'; // Nuevo estado
   DashboardStats? _stats;
   bool _loading = true;
 
@@ -62,7 +63,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Selector de período
                   SegmentedButton<String>(
                     segments: const [
                       ButtonSegment(value: '7days', label: Text('7 días')),
@@ -80,22 +80,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   
                   const SizedBox(height: 24),
                   
-                  // Promedios de macros
                   _buildMacrosCard(),
                   
                   const SizedBox(height: 16),
                   
-                  // Gráfico de calorías
                   _buildCaloriesChart(),
                   
                   const SizedBox(height: 16),
                   
-                  // Top alimentos
                   _buildTopFoods(),
                   
                   const SizedBox(height: 16),
                   
-                  // Completitud de hábitos
                   _buildHabitsCompletion(),
                 ],
               ),
@@ -123,24 +119,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _stats!.avgCalories.toStringAsFixed(0),
                   'kcal',
                   Colors.orange,
+                  'calories',
                 ),
                 _buildMacroItem(
                   'Proteínas',
                   _stats!.avgProtein.toStringAsFixed(1),
                   'g',
                   Colors.red,
+                  'protein',
                 ),
                 _buildMacroItem(
                   'Carbos',
                   _stats!.avgCarbs.toStringAsFixed(1),
                   'g',
                   Colors.blue,
+                  'carbs',
                 ),
                 _buildMacroItem(
                   'Grasas',
                   _stats!.avgFat.toStringAsFixed(1),
                   'g',
                   Colors.green,
+                  'fat',
                 ),
               ],
             ),
@@ -150,27 +150,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMacroItem(String label, String value, String unit, Color color) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+  Widget _buildMacroItem(
+    String label,
+    String value,
+    String unit,
+    Color color,
+    String macroKey,
+  ) {
+    final isSelected = _selectedMacro == macroKey;
+    
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedMacro = macroKey;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : null,
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected ? Border.all(color: color, width: 2) : null,
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected ? color : Colors.grey.shade600,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            Text(
+              unit,
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+            ),
+          ],
         ),
-        Text(
-          unit,
-          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-        ),
-      ],
+      ),
     );
   }
 
@@ -184,15 +212,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
+    // Determinar título y color según el macro seleccionado
+    String chartTitle;
+    Color chartColor;
+    
+    switch (_selectedMacro) {
+      case 'protein':
+        chartTitle = 'Tendencia de Proteínas';
+        chartColor = Colors.red;
+        break;
+      case 'carbs':
+        chartTitle = 'Tendencia de Carbohidratos';
+        chartColor = Colors.blue;
+        break;
+      case 'fat':
+        chartTitle = 'Tendencia de Grasas';
+        chartColor = Colors.green;
+        break;
+      default:
+        chartTitle = 'Tendencia de Calorías';
+        chartColor = Colors.orange;
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Tendencia de Calorías',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              chartTitle,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -204,14 +254,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderData: FlBorderData(show: true),
                   lineBarsData: [
                     LineChartBarData(
-                      spots: _stats!.dailyData.asMap().entries.map((entry) {
-                        return FlSpot(
-                          entry.key.toDouble(),
-                          entry.value.calories,
-                        );
-                      }).toList(),
+                      spots: _getChartSpots(),
                       isCurved: true,
-                      color: Colors.orange,
+                      color: chartColor,
                       barWidth: 3,
                       dotData: const FlDotData(show: true),
                     ),
@@ -224,6 +269,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+List<FlSpot> _getChartSpots() {
+  return _stats!.dailyData.asMap().entries.map((entry) {
+    double value;
+    switch (_selectedMacro) {
+      case 'protein':
+        value = entry.value.protein;
+        break;
+      case 'carbs':
+        value = entry.value.carbs;
+        break;
+      case 'fat':
+        value = entry.value.fat;
+        break;
+      default:
+        value = entry.value.calories;
+    }
+    
+    return FlSpot(entry.key.toDouble(), value);
+  }).toList();
+}
 
   Widget _buildTopFoods() {
     return Card(

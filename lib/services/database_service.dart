@@ -495,26 +495,39 @@ class DatabaseService {
 
     final foodRepo = FoodRepository();
 
-    for (var dateKey in entriesByDay.keys) {
-      double dayCalories = 0;
+for (var dateKey in entriesByDay.keys) {
+  double dayCalories = 0;
+  double dayProtein = 0;   // Agregar
+  double dayCarbs = 0;     // Agregar
+  double dayFat = 0;       // Agregar
 
-      for (var entry in entriesByDay[dateKey]!) {
-        final food = foodRepo.getFoodById(entry['foodId'] as int);
-        if (food != null) {
-          final grams = entry['grams'] as double;
-          final scale = grams / 100;
-          dayCalories += food.calories * scale;
-          totalProtein += food.proteins * scale;
-          totalCarbs += food.carbohydrates * scale;
-          totalFat += food.totalFats * scale;
-        }
-      }
-
-      totalCalories += dayCalories;
-      dailyData.add(
-        DailyData(date: DateTime.parse(dateKey), calories: dayCalories),
-      );
+  for (var entry in entriesByDay[dateKey]!) {
+    final food = foodRepo.getFoodById(entry['foodId'] as int);
+    if (food != null) {
+      final grams = entry['grams'] as double;
+      final scale = grams / 100;
+      dayCalories += food.calories * scale;
+      dayProtein += food.proteins * scale;    // Cambiar totalProtein por dayProtein
+      dayCarbs += food.carbohydrates * scale; // Cambiar totalCarbs por dayCarbs
+      dayFat += food.totalFats * scale;       // Cambiar totalFat por dayFat
     }
+  }
+
+  totalCalories += dayCalories;
+  totalProtein += dayProtein;   // Agregar
+  totalCarbs += dayCarbs;       // Agregar
+  totalFat += dayFat;           // Agregar
+  
+  dailyData.add(
+    DailyData(
+      date: DateTime.parse(dateKey),
+      calories: dayCalories,
+      protein: dayProtein,
+      carbs: dayCarbs,
+      fat: dayFat,
+    ),
+  );
+}
 
     final daysCount = entriesByDay.length > 0 ? entriesByDay.length : 1;
 

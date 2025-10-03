@@ -7,7 +7,7 @@ class DashboardStats {
   final double avgFat;
   final List<DailyData> dailyData;
   final List<TopFood> topFoods;
-  final Map<String, int> habitCompletion; // habitName -> días completados
+  final Map<String, int> habitCompletion;
   
   DashboardStats({
     required this.startDate,
@@ -25,10 +25,16 @@ class DashboardStats {
 class DailyData {
   final DateTime date;
   final double calories;
+  final double protein;   // Agregar
+  final double carbs;     // Agregar
+  final double fat;       // Agregar
   
   DailyData({
     required this.date,
     required this.calories,
+    required this.protein,  // Agregar
+    required this.carbs,    // Agregar
+    required this.fat,      // Agregar
   });
 }
 
