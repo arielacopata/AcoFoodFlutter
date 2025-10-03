@@ -40,6 +40,8 @@ class Food {
   final double vitaminB6;
   final double vitaminB7;
   final double vitaminB9;
+  final double vitaminB12;
+  final double vitaminD; 
 
   // --- AMINOÁCIDOS ESENCIALES ---
   final double histidine;
@@ -90,6 +92,8 @@ class Food {
     this.vitaminB6 = 0,
     this.vitaminB7 = 0,
     this.vitaminB9 = 0,
+    this.vitaminB12 = 0,
+    this.vitaminD = 0,  
     this.histidine = 0,
     this.isoleucine = 0,
     this.leucine = 0,
@@ -150,6 +154,8 @@ class Food {
       vitaminB6: _toDouble(nutrients["Vitamina B6"]),
       vitaminB7: _toDouble(nutrients["Vitamina B7 (Biotina)"]),
       vitaminB9: _toDouble(nutrients["Vitamina B9 (Folato)"]),
+      vitaminB12: _toDouble(nutrients["Vitamina B12"]),
+      vitaminD: _toDouble(nutrients["Vitamina D"]),  
       histidine: _toDouble(nutrients["Histidina"]),
       isoleucine: _toDouble(nutrients["Isoleucina"]),
       leucine: _toDouble(nutrients["Leucina"]),

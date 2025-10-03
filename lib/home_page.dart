@@ -904,7 +904,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Obtenemos la lista completa de alimentos desde el repositorio.
+// 1. Obtenemos la lista completa de alimentos desde el repositorio.
     final allFoods = _foodRepo.getAllFoods();
 
     // 2. Definimos la lista que se mostrará en pantalla.
@@ -912,15 +912,98 @@ class _HomePageState extends State<HomePage> {
 
     if (_searchQuery.isEmpty) {
       // 3. SI NO HAY BÚSQUEDA: mostramos los grupos predefinidos.
-      // (Asegúrate de tener food_groups.dart importado para que esto funcione)
       displayItems = _displayGroups;
     } else {
-      // 4. SI HAY BÚSQUEDA: mostramos una lista plana de alimentos filtrados.
-      displayItems = allFoods.where((food) {
-        final query = _searchQuery.toLowerCase();
-        return food.name.toLowerCase().contains(query) ||
-            (food.fullName?.toLowerCase().contains(query) ?? false);
-      }).toList();
+      // 4. Mapa de nutrientes para filtrado
+final nutrientMap = {
+        // Macronutrientes
+        'proteina': (Food f) => f.proteins,
+        'proteínas': (Food f) => f.proteins,
+        'carbohidratos': (Food f) => f.carbohydrates,
+        'fibra': (Food f) => f.fiber,
+        'grasas': (Food f) => f.totalFats,
+        
+        // Ácidos grasos
+        'omega3': (Food f) => f.omega3,
+        'omega-3': (Food f) => f.omega3,
+        'omega6': (Food f) => f.omega6,
+        'omega-6': (Food f) => f.omega6,
+        'omega9': (Food f) => f.omega9,
+        'omega-9': (Food f) => f.omega9,
+        
+        // Vitaminas
+        'vitamina a': (Food f) => f.vitaminA,
+        'vitamina c': (Food f) => f.vitaminC,
+        'vitamina d': (Food f) => f.vitaminD,
+        'vitamina e': (Food f) => f.vitaminE,
+        'vitamina k': (Food f) => f.vitaminK,
+        'vitamina b1': (Food f) => f.vitaminB1,
+        'b1': (Food f) => f.vitaminB1,
+        'tiamina': (Food f) => f.vitaminB1,
+        'vitamina b2': (Food f) => f.vitaminB2,
+        'b2': (Food f) => f.vitaminB2,
+        'riboflavina': (Food f) => f.vitaminB2,
+        'vitamina b3': (Food f) => f.vitaminB3,
+        'b3': (Food f) => f.vitaminB3,
+        'niacina': (Food f) => f.vitaminB3,
+        'vitamina b4': (Food f) => f.vitaminB4,
+        'b4': (Food f) => f.vitaminB4,
+        'colina': (Food f) => f.vitaminB4,
+        'vitamina b5': (Food f) => f.vitaminB5,
+        'b5': (Food f) => f.vitaminB5,
+        'vitamina b6': (Food f) => f.vitaminB6,
+        'b6': (Food f) => f.vitaminB6,
+        'vitamina b7': (Food f) => f.vitaminB7,
+        'b7': (Food f) => f.vitaminB7,
+        'biotina': (Food f) => f.vitaminB7,
+        'vitamina b9': (Food f) => f.vitaminB9,
+        'b9': (Food f) => f.vitaminB9,
+        'folato': (Food f) => f.vitaminB9,
+        'vitamina b12': (Food f) => f.vitaminB12,
+        'b12': (Food f) => f.vitaminB12,
+        
+        // Minerales
+        'calcio': (Food f) => f.calcium,
+        'hierro': (Food f) => f.iron,
+        'magnesio': (Food f) => f.magnesium,
+        'fosforo': (Food f) => f.phosphorus,
+        'fósforo': (Food f) => f.phosphorus,
+        'potasio': (Food f) => f.potassium,
+        'sodio': (Food f) => f.sodium,
+        'zinc': (Food f) => f.zinc,
+        'cobre': (Food f) => f.copper,
+        'manganeso': (Food f) => f.manganese,
+        'selenio': (Food f) => f.selenium,
+        'yodo': (Food f) => f.iodine,
+        
+        // Aminoácidos
+        'histidina': (Food f) => f.histidine,
+        'isoleucina': (Food f) => f.isoleucine,
+        'leucina': (Food f) => f.leucine,
+        'lisina': (Food f) => f.lysine,
+        'metionina': (Food f) => f.methionine,
+        'fenilalanina': (Food f) => f.phenylalanine,
+        'treonina': (Food f) => f.threonine,
+        'triptofano': (Food f) => f.tryptophan,
+        'triptófano': (Food f) => f.tryptophan,
+        'valina': (Food f) => f.valine,
+      };
+
+      final query = _searchQuery.toLowerCase().trim();
+      
+      // Verificar si la búsqueda coincide con un nutriente
+      if (nutrientMap.containsKey(query)) {
+        // Ordenar por contenido del nutriente
+        final nutrientGetter = nutrientMap[query]!;
+        displayItems = allFoods.toList()
+          ..sort((a, b) => nutrientGetter(b).compareTo(nutrientGetter(a)));
+      } else {
+        // Búsqueda normal por nombre
+        displayItems = allFoods.where((food) {
+          return food.name.toLowerCase().contains(query) ||
+              (food.fullName?.toLowerCase().contains(query) ?? false);
+        }).toList();
+      }
     }
     // --- LÓGICA DE CÁLCULO DE METAS ---
     // (La ponemos aquí mismo para tener todo a mano)
