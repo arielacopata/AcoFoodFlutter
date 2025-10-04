@@ -120,10 +120,9 @@ class NutritionReportSheet extends StatelessWidget {
   Widget? _buildNutrientRow(String nutrientKey) {
     final value = _getNutrientValue(nutrientKey);
 
-    if (value <= 0 && !['omega3', 'omega6'].contains(nutrientKey)) {
-      return null;
-    }
-
+if (value <= 0 && !['omega3', 'omega6', 'vitaminB12', 'vitaminD'].contains(nutrientKey)) {
+  return null;
+}
     Map<String, dynamic>? goalData;
 
     if (nutrientKey == 'calories') {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/habit.dart';
 import '../services/database_service.dart';
 import 'habit_calendar.dart';
+import '../screens/habit_info_screen.dart';
 
 class HabitsModal extends StatefulWidget {
   final VoidCallback? onSettingsTap;
@@ -191,26 +192,35 @@ class _HabitsModalState extends State<HabitsModal> {
                 'Tareas Saludables',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.settings, size: 20),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      if (widget.onSettingsTap != null) {
-                        widget.onSettingsTap!();
-                      }
-                      // Llamar a _showHabitsSettings desde home_page
-                      // Necesitarás pasar un callback
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
+Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    IconButton(
+      icon: const Icon(Icons.info_outline, size: 20),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const HabitInfoScreen(),
+          ),
+        );
+      },
+    ),
+    IconButton(
+      icon: const Icon(Icons.settings, size: 20),
+      onPressed: () {
+        Navigator.pop(context);
+        if (widget.onSettingsTap != null) {
+          widget.onSettingsTap!();
+        }
+      },
+    ),
+    IconButton(
+      icon: const Icon(Icons.close),
+      onPressed: () => Navigator.pop(context),
+    ),
+  ],
+),
             ],
           ),
           const SizedBox(height: 16),

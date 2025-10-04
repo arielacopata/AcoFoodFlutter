@@ -71,30 +71,31 @@ class NutritionCalculator {
     map[key] = (map[key] ?? 0) + value;
   }
 
-  void _processSupplementDose(
-    Map<String, double> totals,
-    int? supplementId,
-    String? dose,
-  ) {
-    if (dose == null || supplementId == null) return;
-
-    // Extraer el número de la dosis (ej: "1000 mcg" -> 1000)
-    final numberMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
-    if (numberMatch == null) return;
-
-    final value = double.parse(numberMatch.group(1)!);
-
-    switch (supplementId) {
-      case 9001: // B12
-        _addToTotal(totals, 'vitaminB12', value); // mcg
-        break;
-      case 9002: // Vitamina D
-        _addToTotal(totals, 'vitaminD', value); // UI
-        break;
-      case 9003: // Omega-3
-        // Asumir que viene en mg, convertir a g
-        _addToTotal(totals, 'omega3', value / 1000);
-        break;
-    }
+void _processSupplementDose(Map<String, double> totals, int? supplementId, String? dose) {
+  if (dose == null || supplementId == null) return;
+  
+  // Extraer el número de la dosis (ej: "1000 mcg" -> 1000)
+  final numberMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+  if (numberMatch == null) return;
+  
+  final value = double.parse(numberMatch.group(1)!);
+  
+  switch (supplementId) {
+    case 9001: // B12 con factor de absorción
+      // Factor intrínseco: máximo 1.5 mcg por dosis
+      // Difusión pasiva: ~1% del resto
+      final absorbed = value <= 1.5 
+          ? value 
+          : 1.5 + ((value - 1.5) * 0.01);
+      _addToTotal(totals, 'vitaminB12', absorbed);
+      break;
+    case 9002: // Vitamina D
+      _addToTotal(totals, 'vitaminD', value); // UI
+      break;
+    case 9003: // Omega-3
+      // Asumir que viene en mg, convertir a g
+      _addToTotal(totals, 'omega3', value / 1000);
+      break;
   }
+}
 }
