@@ -542,6 +542,7 @@ for (var dateKey in entriesByDay.keys) {
         if (foodStats.containsKey(foodId)) {
           foodStats[foodId] = TopFood(
             name: food.name,
+            fullName: food.fullName ?? food.name,
             emoji: food.emoji,
             timesConsumed: foodStats[foodId]!.timesConsumed + 1,
             totalGrams: foodStats[foodId]!.totalGrams + grams,
@@ -549,6 +550,7 @@ for (var dateKey in entriesByDay.keys) {
         } else {
           foodStats[foodId] = TopFood(
             name: food.name,
+            fullName: food.fullName ?? food.name,
             emoji: food.emoji,
             timesConsumed: 1,
             totalGrams: grams,

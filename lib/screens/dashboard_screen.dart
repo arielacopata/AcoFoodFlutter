@@ -337,7 +337,7 @@ Widget _buildTopFoods() {
           ...sortedFoods.take(5).map((food) => ListTile(
             dense: true,
             leading: Text(food.emoji, style: const TextStyle(fontSize: 24)),
-            title: Text(food.name),
+            title: Text(food.fullName ?? food.name),
             trailing: Text(
               _topFoodsSort == 'times'
                   ? '${food.timesConsumed}x'

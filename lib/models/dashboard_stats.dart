@@ -40,12 +40,14 @@ class DailyData {
 
 class TopFood {
   final String name;
+  final String fullName;
   final String emoji;
   final int timesConsumed;
   final double totalGrams;
   
   TopFood({
     required this.name,
+    required this.fullName,
     required this.emoji,
     required this.timesConsumed,
     required this.totalGrams,
