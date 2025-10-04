@@ -1,3 +1,8 @@
+# Keystore y credenciales
+*.jks
+*.keystore
+android/key.properties
+
 # Flutter/Dart/Pub related
 .dart_tool/
 .packages
