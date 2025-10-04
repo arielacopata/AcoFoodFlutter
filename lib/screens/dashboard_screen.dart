@@ -12,7 +12,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   String _selectedPeriod = '7days';
-  String _selectedMacro = 'calories'; // Nuevo estado
+  String _selectedMacro = 'calories';
+  String _topFoodsSort = 'times'; // Nuevo estado
   DashboardStats? _stats;
   bool _loading = true;
 
@@ -291,29 +292,63 @@ List<FlSpot> _getChartSpots() {
   }).toList();
 }
 
-  Widget _buildTopFoods() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Top 5 Alimentos',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            ..._stats!.topFoods.map((food) => ListTile(
-              dense: true,
-              leading: Text(food.emoji, style: const TextStyle(fontSize: 24)),
-              title: Text(food.name),
-              trailing: Text('${food.timesConsumed}x'),
-            )),
-          ],
-        ),
-      ),
-    );
+Widget _buildTopFoods() {
+  // Ordenar según el criterio seleccionado
+  final sortedFoods = _stats!.topFoods.toList();
+  if (_topFoodsSort == 'weight') {
+    sortedFoods.sort((a, b) => b.totalGrams.compareTo(a.totalGrams));
   }
+  // Si es 'times' ya viene ordenado del getDashboardStats
+
+  return Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Top 5 Alimentos',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          
+          // Toggle
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: 'times',
+                label: Text('Más consumidos'),
+              ),
+              ButtonSegment(
+                value: 'weight',
+                label: Text('Mayor peso'),
+              ),
+            ],
+            selected: {_topFoodsSort},
+            onSelectionChanged: (Set<String> newSelection) {
+              setState(() {
+                _topFoodsSort = newSelection.first;
+              });
+            },
+          ),
+          
+          const SizedBox(height: 12),
+          
+          ...sortedFoods.take(5).map((food) => ListTile(
+            dense: true,
+            leading: Text(food.emoji, style: const TextStyle(fontSize: 24)),
+            title: Text(food.name),
+            trailing: Text(
+              _topFoodsSort == 'times'
+                  ? '${food.timesConsumed}x'
+                  : '${food.totalGrams.toStringAsFixed(0)}g',
+            ),
+          )),
+        ],
+      ),
+    ),
+  );
+}
 
   Widget _buildHabitsCompletion() {
     if (_stats!.habitCompletion.isEmpty) {
