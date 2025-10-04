@@ -643,6 +643,7 @@ class _HomePageState extends State<HomePage> {
         weightStream: _weightController.stream.map(
           (w) => (w - _tareWeight).abs(),
         ),
+         onTare: _setTare,
       ),
     );
 
@@ -859,6 +860,7 @@ class _HomePageState extends State<HomePage> {
         weightStream: _weightController.stream.map(
           (w) => (w - _tareWeight).abs(),
         ),
+         onTare: _setTare,
       ),
     );
 
@@ -1147,9 +1149,6 @@ final nutrientMap = {
                           const Spacer(),
                           BluetoothManager(
                             onWeightChanged: (grams) {
-                              print(
-                                'DEBUG: Peso recibido = $grams',
-                              ); // 👈 AGREGAR ESTO
                               setState(() => _weight = grams);
                               _weightController.add(grams);
                             },

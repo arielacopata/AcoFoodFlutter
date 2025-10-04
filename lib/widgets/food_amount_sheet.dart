@@ -5,12 +5,14 @@ class FoodAmountSheet extends StatefulWidget {
   final Food food;
   final bool isScaleConnected;
   final Stream<double>? weightStream;
+  final VoidCallback? onTare;
 
   const FoodAmountSheet({
     super.key,
     required this.food,
     required this.isScaleConnected,
     this.weightStream,
+    this.onTare,
   });
 
   @override
@@ -141,41 +143,70 @@ class _FoodAmountSheetState extends State<FoodAmountSheet> {
                         return Column(
                           children: [
                             const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 24,
-                              ),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Theme.of(context).dividerColor,
-                                ),
-                              ),
-                              child: Text(
-                                "${grams.toStringAsFixed(1)} g",
-                                style: const TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            // Peso centrado
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                vertical: 16,
+                                                horizontal: 24,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: Theme.of(context).dividerColor,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                "${grams.toStringAsFixed(1)} g",
+                                                style: const TextStyle(
+                                                  fontSize: 28,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            // Botón de tara a la derecha
+                                            Positioned(
+                                              right: 0,
+                                              child: Column(
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.balance, size: 24),
+                                                    onPressed: widget.onTare,
+                                                  ),
+                                                  const Text(
+                                                    'Tara',
+                                                    style: TextStyle(fontSize: 10),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                        const SizedBox(height: 12),
 
-                            if (widget
-                                .isScaleConnected) // 👈 acá sí va el if directo
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton.icon(
-                                  icon: const Icon(Icons.scale),
-                                  label: Text(
-                                    "Usar peso (${grams.toStringAsFixed(1)} g)",
-                                  ),
-                                  onPressed: (grams > 0)
-                                      ? () => Navigator.pop(context, grams)
-                                      : null,
-                                ),
+                        if (widget.isScaleConnected)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.scale),
+                              label: Text(
+                                "Usar peso (${grams.toStringAsFixed(1)} g)",
                               ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: (grams > 0) ? Colors.lightBlue : null,
+                                foregroundColor: (grams > 0) ? Colors.white : null,
+                              ),
+                              onPressed: (grams > 0)
+                                  ? () => Navigator.pop(context, grams)
+                                  : null,
+                            ),
+                          ),
+
                           ],
                         );
                       },
