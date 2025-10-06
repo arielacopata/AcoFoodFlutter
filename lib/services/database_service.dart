@@ -7,6 +7,7 @@ import 'food_repository.dart';
 import '../models/habit.dart';
 import '../models/dashboard_stats.dart';
 import '../data/supplements_data.dart';
+import '../models/recipe.dart';
 
 class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
@@ -43,7 +44,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 12, // 👈 subí la versión para que dispare onUpgrade
+      version: 13, // 👈 subí la versión para que dispare onUpgrade
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -125,6 +126,27 @@ class DatabaseService {
   ('Ducha fría', '🚿', 'predefined', '["30 seg","1 min","2 min","5 min"]'),
   ('Agradecer', '🙏', 'predefined', '["Lista de 3","Journaling","Meditación","A alguien"]'),
   ('Ejercicio', '🏃', 'predefined', '["HIIT","Correr","Gimnasio","Caminar","Bicicleta","General"]')
+''');
+
+    // Tabla de recetas
+    await db.execute('''
+  CREATE TABLE recipes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    emoji TEXT,
+    created_at TEXT NOT NULL
+  )
+''');
+
+    // Tabla de ingredientes de recetas
+    await db.execute('''
+  CREATE TABLE recipe_ingredients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipe_id INTEGER NOT NULL,
+    food_id INTEGER NOT NULL,
+    grams REAL NOT NULL,
+    FOREIGN KEY (recipe_id) REFERENCES recipes (id) ON DELETE CASCADE
+  )
 ''');
   }
 
@@ -225,6 +247,28 @@ class DatabaseService {
         'ALTER TABLE history ADD COLUMN isSupplement INTEGER DEFAULT 0',
       );
       await db.execute('ALTER TABLE history ADD COLUMN supplementDose TEXT');
+    }
+
+    if (oldVersion < 13) {
+      // Agregar tablas de recetas
+      await db.execute('''
+    CREATE TABLE IF NOT EXISTS recipes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      emoji TEXT,
+      created_at TEXT NOT NULL
+    )
+  ''');
+
+      await db.execute('''
+    CREATE TABLE IF NOT EXISTS recipe_ingredients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recipe_id INTEGER NOT NULL,
+      food_id INTEGER NOT NULL,
+      grams REAL NOT NULL,
+      FOREIGN KEY (recipe_id) REFERENCES recipes (id) ON DELETE CASCADE
+    )
+  ''');
     }
   }
 
@@ -458,6 +502,81 @@ class DatabaseService {
     );
   }
 
+  // ============ MÉTODOS DE RECETAS ============
+
+  /// Guardar una receta completa con sus ingredientes
+  Future<int> saveRecipe(
+    Recipe recipe,
+    List<RecipeIngredient> ingredients,
+  ) async {
+    final db = await database;
+
+    // Guardar la receta
+    final recipeId = await db.insert('recipes', recipe.toMap());
+
+    // Guardar cada ingrediente
+    for (final ingredient in ingredients) {
+      await db.insert('recipe_ingredients', {
+        'recipe_id': recipeId,
+        'food_id': ingredient.food.id,
+        'grams': ingredient.grams,
+      });
+    }
+
+    return recipeId;
+  }
+
+  /// Obtener todas las recetas
+  Future<List<Recipe>> getAllRecipes() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'recipes',
+      orderBy: 'created_at DESC',
+    );
+
+    return maps.map((map) => Recipe.fromMap(map)).toList();
+  }
+
+  /// Obtener los ingredientes de una receta
+  Future<List<RecipeIngredient>> getRecipeIngredients(int recipeId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'recipe_ingredients',
+      where: 'recipe_id = ?',
+      whereArgs: [recipeId],
+    );
+
+    List<RecipeIngredient> ingredients = [];
+
+    // Por cada ingrediente, obtener el Food correspondiente
+    for (final map in maps) {
+      final foodId = map['food_id'] as int;
+      final food = FoodRepository().getFoodById(foodId);
+      if (food != null) {
+        ingredients.add(RecipeIngredient.fromMap(map, food));
+      }
+    }
+
+    return ingredients;
+  }
+
+  /// Registrar todos los ingredientes de una receta
+  Future<void> registerRecipeIngredients(int recipeId) async {
+    final ingredients = await getRecipeIngredients(recipeId);
+
+    for (final ingredient in ingredients) {
+      final entry = FoodEntry(food: ingredient.food, grams: ingredient.grams);
+      await createEntry(entry);
+      await incrementFoodUsage(ingredient.food.id!);
+    }
+  }
+
+  /// Eliminar una receta (y sus ingredientes por CASCADE)
+  Future<void> deleteRecipe(int recipeId) async {
+    final db = await database;
+    await db.delete('recipes', where: 'id = ?', whereArgs: [recipeId]);
+  }
+
   Future<DashboardStats> getDashboardStats(
     DateTime startDate,
     DateTime endDate,
@@ -495,39 +614,41 @@ class DatabaseService {
 
     final foodRepo = FoodRepository();
 
-for (var dateKey in entriesByDay.keys) {
-  double dayCalories = 0;
-  double dayProtein = 0;   // Agregar
-  double dayCarbs = 0;     // Agregar
-  double dayFat = 0;       // Agregar
+    for (var dateKey in entriesByDay.keys) {
+      double dayCalories = 0;
+      double dayProtein = 0; // Agregar
+      double dayCarbs = 0; // Agregar
+      double dayFat = 0; // Agregar
 
-  for (var entry in entriesByDay[dateKey]!) {
-    final food = foodRepo.getFoodById(entry['foodId'] as int);
-    if (food != null) {
-      final grams = entry['grams'] as double;
-      final scale = grams / 100;
-      dayCalories += food.calories * scale;
-      dayProtein += food.proteins * scale;    // Cambiar totalProtein por dayProtein
-      dayCarbs += food.carbohydrates * scale; // Cambiar totalCarbs por dayCarbs
-      dayFat += food.totalFats * scale;       // Cambiar totalFat por dayFat
+      for (var entry in entriesByDay[dateKey]!) {
+        final food = foodRepo.getFoodById(entry['foodId'] as int);
+        if (food != null) {
+          final grams = entry['grams'] as double;
+          final scale = grams / 100;
+          dayCalories += food.calories * scale;
+          dayProtein +=
+              food.proteins * scale; // Cambiar totalProtein por dayProtein
+          dayCarbs +=
+              food.carbohydrates * scale; // Cambiar totalCarbs por dayCarbs
+          dayFat += food.totalFats * scale; // Cambiar totalFat por dayFat
+        }
+      }
+
+      totalCalories += dayCalories;
+      totalProtein += dayProtein; // Agregar
+      totalCarbs += dayCarbs; // Agregar
+      totalFat += dayFat; // Agregar
+
+      dailyData.add(
+        DailyData(
+          date: DateTime.parse(dateKey),
+          calories: dayCalories,
+          protein: dayProtein,
+          carbs: dayCarbs,
+          fat: dayFat,
+        ),
+      );
     }
-  }
-
-  totalCalories += dayCalories;
-  totalProtein += dayProtein;   // Agregar
-  totalCarbs += dayCarbs;       // Agregar
-  totalFat += dayFat;           // Agregar
-  
-  dailyData.add(
-    DailyData(
-      date: DateTime.parse(dateKey),
-      calories: dayCalories,
-      protein: dayProtein,
-      carbs: dayCarbs,
-      fat: dayFat,
-    ),
-  );
-}
 
     final daysCount = entriesByDay.length > 0 ? entriesByDay.length : 1;
 

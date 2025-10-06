@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:async';
 
 class BluetoothManager extends StatefulWidget {
   final void Function(double grams) onWeightChanged;
@@ -19,6 +20,7 @@ class BluetoothManager extends StatefulWidget {
 class _BluetoothManagerState extends State<BluetoothManager> {
   BluetoothDevice? _connectedDevice;
   final List<ScanResult> _scanResults = [];
+  StreamSubscription<BluetoothConnectionState>? _connectionStateSubscription;
 
   @override
   void initState() {
@@ -29,6 +31,8 @@ class _BluetoothManagerState extends State<BluetoothManager> {
   Future<void> _checkPermissions() async {
     await Permission.bluetoothScan.request();
     await Permission.bluetoothConnect.request();
+    await Permission.bluetooth.request();
+    await Permission.location.request();
     await Permission.locationWhenInUse.request();
   }
 
@@ -48,35 +52,75 @@ class _BluetoothManagerState extends State<BluetoothManager> {
   }
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
-    await device.connect(
-      timeout: const Duration(seconds: 10),
-      autoConnect: false,
-    );
+    try {
+      await device.connect(
+        timeout: const Duration(seconds: 10),
+        autoConnect: false,
+      );
 
-    setState(() => _connectedDevice = device);
-    widget.onConnectionChanged(true); // Notificar conexión
+      setState(() => _connectedDevice = device);
+      widget.onConnectionChanged(true);
 
-    final services = await device.discoverServices();
-    for (var service in services) {
-      for (var char in service.characteristics) {
-        if (char.properties.notify) {
-          await char.setNotifyValue(true);
-char.onValueReceived.listen((value) {
-  if (value.length >= 6) {
-    int raw = (value[3] << 8) | value[4];
-    double grams = raw / 10.0;
-    
-    // byte[5]: 2 = positivo, 3 = negativo
-    if (value[5] == 3) {
-      grams = -grams;
-    }
-    
-    widget.onWeightChanged(grams);
-  }
-});
+      // ⭐ AGREGAR: Escuchar cambios en el estado de conexión
+      _connectionStateSubscription = device.connectionState.listen((
+        BluetoothConnectionState state,
+      ) {
+        debugPrint('Estado de conexión: $state');
+
+        if (state == BluetoothConnectionState.disconnected) {
+          // La balanza se desconectó (apagada o fuera de rango)
+          debugPrint('Balanza desconectada automáticamente');
+          _handleDisconnection();
+        }
+      });
+
+      final services = await device.discoverServices();
+      for (var service in services) {
+        for (var char in service.characteristics) {
+          if (char.properties.notify) {
+            await char.setNotifyValue(true);
+            char.onValueReceived.listen((value) {
+              if (value.length >= 6) {
+                int raw = (value[3] << 8) | value[4];
+                double grams = raw / 10.0;
+
+                // byte[5]: 2 = positivo, 3 = negativo
+                if (value[5] == 3) {
+                  grams = -grams;
+                }
+
+                widget.onWeightChanged(grams);
+              }
+            });
+          }
         }
       }
+    } catch (e) {
+      debugPrint("Error al conectar: $e");
+      _handleDisconnection();
     }
+  }
+
+  void _handleDisconnection() {
+    if (mounted) {
+      setState(() {
+        _connectedDevice = null;
+      });
+      widget.onConnectionChanged(false);
+
+      // Cancelar suscripción al estado de conexión
+      _connectionStateSubscription?.cancel();
+      _connectionStateSubscription = null;
+    }
+  }
+
+  Future<void> _manualDisconnect() async {
+    try {
+      await _connectedDevice?.disconnect();
+    } catch (e) {
+      debugPrint("Error al desconectar manualmente: $e");
+    }
+    _handleDisconnection();
   }
 
   @override
@@ -88,8 +132,8 @@ char.onValueReceived.listen((value) {
           ..._scanResults.map(
             (r) => ListTile(
               title: Text(
-                r.device.name.isNotEmpty
-                    ? r.device.name
+                r.device.platformName.isNotEmpty
+                    ? r.device.platformName
                     : r.device.remoteId.toString(),
               ),
               subtitle: Text("RSSI: ${r.rssi}"),
@@ -112,11 +156,7 @@ char.onValueReceived.listen((value) {
               ),
               const SizedBox(width: 8),
               OutlinedButton(
-                onPressed: () async {
-                  await _connectedDevice!.disconnect();
-                  setState(() => _connectedDevice = null);
-                  widget.onConnectionChanged(false); // Notificar desconexión
-                },
+                onPressed: _manualDisconnect,
                 child: const Text("Desconectar"),
               ),
             ],
@@ -128,10 +168,11 @@ char.onValueReceived.listen((value) {
 
   @override
   void dispose() {
+    _connectionStateSubscription?.cancel();
     try {
       _connectedDevice?.disconnect();
     } catch (e) {
-      debugPrint("Error al desconectar: $e");
+      debugPrint("Error al desconectar en dispose: $e");
     }
     super.dispose();
   }

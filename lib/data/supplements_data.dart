@@ -20,4 +20,10 @@ final List<Food> supplementsList = [
     name: 'Omega-3 (Algas)',
     fullName: 'Omega-3 de algas marinas',
   ),
+  Food(
+    id: 9004, // ← NUEVO
+    emoji: '🧂',
+    name: 'Yodo',
+    fullName: 'Yodo (suplemento)',
+  ),
 ];
