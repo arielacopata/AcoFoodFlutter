@@ -115,17 +115,19 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => _buildSupplementModal(supplement),
     );
 
-    //print('DEBUG: result = $result'); // 👈 AGREGAR
+    print('🧂 DEBUG: result completo = $result'); 
 
     if (result != null && result['dose'] != null) {
+      print('🧂 DEBUG resultado: $result');
+
       final entry = FoodEntry(
         food: supplement,
-        grams: 0,
+        grams: result['grams'] ?? 0,
         isSupplement: true,
         supplementDose: result['dose'],
       );
 
-      //print(        'DEBUG: Guardando entry: ${entry.food.name}, dosis: ${entry.supplementDose}, isSupplement: ${entry.isSupplement}',      ); // 👈 AGREGAR
+  print('🧂 DEBUG entry creado: grams=${entry.grams}, food.iodine=${supplement.iodine}'); // ← Verificar
 
       await DatabaseService.instance.createEntry(entry);
 
@@ -143,126 +145,153 @@ class _HomePageState extends State<HomePage> {
     return false;
   }
 
-  Widget _buildSupplementModal(Food supplement) {
-    final doseController = TextEditingController();
+Widget _buildSupplementModal(Food supplement) {
+  final doseController = TextEditingController();
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  children: [
-                    Text(
-                      '${supplement.emoji}  ${supplement.name}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+  return Padding(
+    padding: EdgeInsets.only(
+      bottom: MediaQuery.of(context).viewInsets.bottom,
+    ),
+    child: SafeArea(
+      child: SingleChildScrollView(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Text(
+                    '${supplement.emoji}  ${supplement.name}',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Si es B12, mostrar botones rápidos
-                if (supplement.id == 9001) ...[
-                  const Text(
-                    'Dosis común:',
-                    style: TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _quickDoseButton(context, '500 mcg'),
-                      _quickDoseButton(context, '1000 mcg'),
-                      _quickDoseButton(context, '3500 mcg'),
-                    ],
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
                 ],
+              ),
+              const SizedBox(height: 16),
 
-                if (supplement.id == 9004) ...[
-                  const Text(
-                    'Dosis común:',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _quickDoseButton(context, '150 mcg'),
-                      _quickDoseButton(context, '225 mcg'),
-                      _quickDoseButton(context, '325 mcg'),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '⚠️ Límite seguro: 1100 mcg/día',
-                    style: TextStyle(fontSize: 12, color: Colors.orange),
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                ],
-
-                // Input libre
+              // B12 - Solo botones predefinidos
+              if (supplement.id == 9001) ...[
                 const Text(
-                  'Dosis personalizada:',
+                  'Dosis común:',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: doseController,
-                        decoration: const InputDecoration(
-                          hintText: 'Ej: 2 cápsulas, 2000 UI',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (doseController.text.isNotEmpty) {
-                          Navigator.pop(context, {'dose': doseController.text});
-                        }
-                      },
-                      child: const Text('OK'),
-                    ),
+                    _quickDoseButton(context, '500 mcg'),
+                    _quickDoseButton(context, '1000 mcg'),
+                    _quickDoseButton(context, '2500 mcg'),
                   ],
                 ),
+                const SizedBox(height: 8),
+                const Text(
+                  '💡 1 pastilla = 1000-2500 mcg normalmente',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
               ],
-            ),
+
+              // Vitamina D - Botones predefinidos
+              if (supplement.id == 9002) ...[
+                const Text(
+                  'Dosis común:',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _quickDoseButton(context, '1000 UI'),
+                    _quickDoseButton(context, '2000 UI'),
+                    _quickDoseButton(context, '4000 UI'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '☀️ 1000 UI = 25 mcg',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+
+              // Yodo - Botones predefinidos
+              if (supplement.id == 9004) ...[
+                const Text(
+                  '🧂 30 mcg ≈ 1g sal | 60 mcg ≈ 2g sal | ⚠️ Límite: 1100 mcg/día',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _quickDoseButton(context, '30 mcg'),
+                    _quickDoseButton(context, '60 mcg'),
+                    _quickDoseButton(context, '150 mcg'),
+                    _quickDoseButton(context, '225 mcg'),
+                    _quickDoseButton(context, '325 mcg'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '⚠️ Límite seguro: 1100 mcg/día',
+                  style: TextStyle(fontSize: 12, color: Colors.orange),
+                ),
+              ],
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _quickDoseButton(BuildContext context, String dose) {
-    return ElevatedButton(
-      onPressed: () => Navigator.pop(context, {'dose': dose}),
-      child: Text(dose),
-    );
+Widget _quickDoseButton(BuildContext context, String dose) {
+  double grams;
+  
+  if (dose.contains('UI')) {
+    // Vitamina D: 1000 UI = 1g
+    final uiMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+    final ui = uiMatch != null ? double.parse(uiMatch.group(1)!) : 0;
+    grams = ui / 1000.0; // 1000 UI = 1g
+  } else if (dose.contains('mcg')) {
+    // Extraer el número
+    final mcgMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+    final mcg = mcgMatch != null ? double.parse(mcgMatch.group(1)!) : 0;
+    
+    // Determinar la base según el valor (para diferenciar B12 de Yodo)
+    if (mcg >= 500) {
+      // B12 (500-3500 mcg): base 1000 mcg = 1g
+      grams = mcg / 1000.0;
+    } else {
+      // Yodo (150-325 mcg): base 150 mcg = 1g
+      grams = mcg / 150.0;
+    }
+  } else {
+    grams = 0;
   }
+  
+  print('🔘 DEBUG botón: dose=$dose → grams=$grams');
+  
+  return ElevatedButton(
+    onPressed: () => Navigator.pop(context, {
+      'dose': dose,
+      'grams': grams,
+    }),
+    child: Text(dose),
+  );
+}
 
   /// Importar backup desde archivo JSON
   Future<void> _importBackup() async {
@@ -621,144 +650,162 @@ class _HomePageState extends State<HomePage> {
 
   // AGREGAR esta función en home_page.dart, cerca de las otras funciones de modales
 
-  /// Modal para registrar Yodo
-  Future<void> _showIodineModal() async {
-    final TextEditingController doseController = TextEditingController();
+/// Modal para registrar Yodo
+Future<void> _showIodineModal() async {
+  print('🧂 DEBUG: Modal de Yodo abierto');
+  final TextEditingController doseController = TextEditingController();
 
-    final result = await showModalBottomSheet<Map<String, dynamic>?>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  final result = await showModalBottomSheet<Map<String, dynamic>?>(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) => Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+        left: 24,
+        right: 24,
+        top: 24,
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '🧂 Yodo (suplemento)',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Dosis del suplemento',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                '🧂 Yodo (suplemento)',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Dosis del suplemento',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
 
-            // Botones de dosis predefinidas
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '150 mcg'}),
-                    child: const Text('150 mcg'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '225 mcg'}),
-                    child: const Text('225 mcg'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '325 mcg'}),
-                    child: const Text('325 mcg'),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-
-            // Input personalizado
-            const Text(
-              'O ingresa una dosis personalizada:',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: doseController,
-                    keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(
-                      hintText: 'Ej: 400 mcg, 2000 UI',
-                      border: OutlineInputBorder(),
+          // Botones de dosis predefinidas
+          Row(
+            children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final result = {
+                            'dose': '150 mcg',
+                            'grams': 1.0
+                          };
+                          print('DEBUG Yodo botón: grams=${result['grams']}, dose=${result['dose']}');
+                          Navigator.pop(context, result);
+                        },
+                        child: const Text('150 mcg'),
+                      ),
                     ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, {
+                    'dose': '225 mcg',
+                    'grams': 1.5 // 225 mcg = 1.5 dosis
+                  }),
+                  child: const Text('225 mcg'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, {
+                    'dose': '325 mcg',
+                    'grams': 2.17 // 325 mcg ≈ 2.17 dosis
+                  }),
+                  child: const Text('325 mcg'),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+
+          // Input personalizado
+          const Text(
+            'O ingresa una dosis personalizada:',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: doseController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    hintText: 'Cantidad en mcg (ej: 150)',
+                    border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    if (doseController.text.isNotEmpty) {
-                      Navigator.pop(context, {'dose': doseController.text});
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () {
+                  if (doseController.text.isNotEmpty) {
+                    final mcg = double.tryParse(doseController.text);
+                    if (mcg != null) {
+                      Navigator.pop(context, {
+                        'dose': '$mcg mcg',
+                        'grams': mcg / 150.0 // Convertir mcg a gramos (150 mcg = 1g)
+                      });
                     }
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
+                  }
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
 
-            const SizedBox(height: 8),
-            const Text(
-              '⚠️ Límite seguro: 1100 mcg/día',
-              style: TextStyle(fontSize: 11, color: Colors.orange),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          const SizedBox(height: 8),
+          const Text(
+            '⚠️ Límite seguro: 1100 mcg/día',
+            style: TextStyle(fontSize: 11, color: Colors.orange),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
+    ),
+  );
+
+  // Si se seleccionó una dosis, registrarla
+  if (result != null && result['dose'] != null && result['grams'] != null) {
+      print('DEBUG Yodo recibido: grams=${result['grams']}, dose=${result['dose']}');
+    final iodineFood = supplementsList.firstWhere((s) => s.id == 9004);
+    final entry = FoodEntry(
+      food: iodineFood,
+      grams: result['grams'], // ✅ Ahora tiene valor real en gramos
+      isSupplement: true,
+      supplementDose: result['dose'],
     );
 
-    // Si se seleccionó una dosis, registrarla
-    if (result != null && result['dose'] != null) {
-      final iodineFood = supplementsList.firstWhere((s) => s.id == 9004);
-      final entry = FoodEntry(
-        food: iodineFood,
-        grams: 0, // Los suplementos no tienen gramos
-        isSupplement: true,
-        supplementDose: result['dose'],
+    await DatabaseService.instance.createEntry(entry);
+    _loadHistory();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Yodo registrado: ${result['dose']}'),
+          duration: const Duration(seconds: 2),
+        ),
       );
-
-      await DatabaseService.instance.createEntry(entry);
-      _loadHistory();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Yodo registrado: ${result['dose']}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
     }
   }
+}
 
   // Exportar como texto
   Future<void> _exportAsText() async {
@@ -1242,6 +1289,7 @@ class _HomePageState extends State<HomePage> {
           // Volver a abrir la lista de alimentos para agregar otro
           setState(() {
             _isBuildingMultiple = true;
+            _tareWeight = _weight;
           });
           // No hacer nada más, el usuario volverá a seleccionar otro alimento
         } else if (action == 'finish') {
