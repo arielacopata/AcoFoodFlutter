@@ -1596,10 +1596,6 @@ class _HomePageState extends State<HomePage> {
                                 });
                                 _weightController.add(grams);
                               },
-                            onConnectionChanged: (isConnected) {
-                              setState(() => _isScaleConnected = isConnected);
-                            },
-                          ),
                           // Botones más compactos
                           if (_tareWeight == 0)
                             OutlinedButton.icon(

@@ -107,7 +107,6 @@ class _BluetoothManagerState extends State<BluetoothManager> {
         _connectedDevice = null;
       });
       widget.onConnectionChanged(false);
-      widget.onWeightChanged(0.0);
 
       // Cancelar suscripción al estado de conexión
       _connectionStateSubscription?.cancel();
