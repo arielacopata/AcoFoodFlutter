@@ -1,4 +1,4 @@
-import 'package:flutter/services.dart'; // Agregar este import
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:convert';
 import 'dart:io';
@@ -8,16 +8,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database_service.dart';
 
 class ExportService {
-  /// Genera texto plano para Zepp
+  /// Genera texto plano para Zepp (con cantidades sumadas y nombre completo)
   static String generateTextForZepp(List<FoodEntry> entries) {
     if (entries.isEmpty) return "Sin registros para exportar";
 
-    final buffer = StringBuffer();
+    // Mapa para agrupar por nombre completo del alimento
+    final Map<String, double> foodTotals = {};
+
     for (final entry in entries) {
-      buffer.writeln(
-        "${entry.grams.toStringAsFixed(0)}g de ${entry.food.name}",
-      );
+      // Usar fullName si existe, sino usar name
+      final foodName = entry.food.fullName ?? entry.food.name;
+
+      // Sumar los gramos al total de ese alimento
+      foodTotals[foodName] = (foodTotals[foodName] ?? 0) + entry.grams;
     }
+
+    // Construir el texto con los totales
+    final buffer = StringBuffer();
+    foodTotals.forEach((foodName, totalGrams) {
+      buffer.writeln("${totalGrams.toStringAsFixed(0)}g de $foodName");
+    });
+
     return buffer.toString();
   }
 
@@ -62,13 +73,16 @@ class ExportService {
     return jsonEncode(backup);
   }
 
-  /// Comparte archivo JSON usando share_plus
+  /// Comparte archivo JSON usando share_plus (método actualizado)
   static Future<void> shareJsonFile(String jsonContent) async {
     final directory = await getTemporaryDirectory();
     final date = DateTime.now().toIso8601String().split('T')[0];
     final file = File('${directory.path}/acofood_backup_$date.json');
     await file.writeAsString(jsonContent);
 
-    await Share.shareXFiles([XFile(file.path)], subject: 'Backup AcoFood');
+    // Método actualizado sin deprecación
+    final result = await Share.shareXFiles([
+      XFile(file.path),
+    ], subject: 'Backup AcoFood');
   }
 }

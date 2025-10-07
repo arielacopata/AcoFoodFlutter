@@ -5,22 +5,27 @@ import '../models/user_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/calorie_calculator.dart';
+import '../models/recipe.dart';
 // import '../services/google_fit_service.dart';
 
 class SettingsDrawer extends StatefulWidget {
   final UserProfile? profile;
-  final Function(UserProfile)? onProfileUpdated; // 👈 NUEVO
-  final VoidCallback? onHistoryChanged; // 👈 NUEVO
-  final Function(String)? onSortOrderChanged; // 👈 Agregar esto
-  final Function()? onRemindersChanged; // Agregar esto
+  final Function(UserProfile)? onProfileUpdated;
+  final VoidCallback? onHistoryChanged;
+  final Function(String)? onSortOrderChanged;
+  final Function()? onRemindersChanged;
+  final VoidCallback onOpenImportExport;
+  final VoidCallback? onRecipeUsed;
 
   const SettingsDrawer({
     super.key,
     this.profile,
-    this.onProfileUpdated, // 👈 NUEVO
-    this.onHistoryChanged, // 👈 NUEVO
-    this.onSortOrderChanged, // 👈 Agregar esto
-    this.onRemindersChanged, // Agregar esto
+    this.onProfileUpdated,
+    this.onHistoryChanged,
+    this.onSortOrderChanged,
+    this.onRemindersChanged,
+    required this.onOpenImportExport,
+    this.onRecipeUsed,
   });
 
   @override
@@ -217,101 +222,331 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
   }
 
   String _getGoalText() {
-  if (widget.profile?.goalType == null) return 'No configurado';
-  
-  switch (widget.profile!.goalType) {
-    case 'deficit':
-      return 'Bajar peso (-500 kcal/día)';
-    case 'maintain':
-      return 'Mantener peso';
-    case 'surplus':
-      return 'Subir peso (+300 kcal/día)';
-    default:
-      return 'No configurado';
-  }
-}
+    if (widget.profile?.goalType == null) return 'No configurado';
 
-Future<void> _showGoalDialog() async {
-  final goal = await showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Objetivo de peso'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: const Text('Bajar peso'),
-            subtitle: const Text('Déficit de 500 kcal/día'),
-            onTap: () => Navigator.pop(context, 'deficit'),
+    switch (widget.profile!.goalType) {
+      case 'deficit':
+        return 'Bajar peso (-500 kcal/día)';
+      case 'maintain':
+        return 'Mantener peso';
+      case 'surplus':
+        return 'Subir peso (+300 kcal/día)';
+      default:
+        return 'No configurado';
+    }
+  }
+
+  Future<void> _showGoalDialog() async {
+    final goal = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Objetivo de peso'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Bajar peso'),
+              subtitle: const Text('Déficit de 500 kcal/día'),
+              onTap: () => Navigator.pop(context, 'deficit'),
+            ),
+            ListTile(
+              title: const Text('Mantener peso'),
+              subtitle: const Text('Sin ajuste calórico'),
+              onTap: () => Navigator.pop(context, 'maintain'),
+            ),
+            ListTile(
+              title: const Text('Subir peso'),
+              subtitle: const Text('Superávit de 300 kcal/día'),
+              onTap: () => Navigator.pop(context, 'surplus'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (goal != null && widget.profile != null) {
+      final maintenanceCalories =
+          CalorieCalculator.calculateRecommendedCalories(
+            dob: widget.profile!.dob,
+            gender: widget.profile!.gender,
+            weight: widget.profile!.weight,
+            height: widget.profile!.height,
+            lifestyle: widget.profile!.lifestyle,
+            exerciseLevel: widget.profile!.exerciseLevel,
+            expenditure: widget.profile!.expenditure,
+          ).toInt();
+
+      int goalCalories = maintenanceCalories;
+
+      switch (goal) {
+        case 'deficit':
+          goalCalories -= 500;
+          break;
+        case 'surplus':
+          goalCalories += 300;
+          break;
+      }
+
+      final updatedProfile = UserProfile(
+        id: widget.profile!.id,
+        name: widget.profile!.name,
+        email: widget.profile!.email,
+        dob: widget.profile!.dob,
+        gender: widget.profile!.gender,
+        weight: widget.profile!.weight,
+        height: widget.profile!.height,
+        lifestyle: widget.profile!.lifestyle,
+        exerciseLevel: widget.profile!.exerciseLevel,
+        expenditure: widget.profile!.expenditure,
+        carbs: widget.profile!.carbs,
+        protein: widget.profile!.protein,
+        fat: widget.profile!.fat,
+        goalType: goal,
+        goalCalories: goalCalories,
+      );
+
+      await DatabaseService.instance.saveUserProfile(updatedProfile);
+      if (widget.onProfileUpdated != null) {
+        widget.onProfileUpdated!(updatedProfile);
+      }
+
+      if (widget.onHistoryChanged != null) {
+        // ← Agregar esto
+        widget.onHistoryChanged!(); // ← y esto
+      }
+      setState(() {});
+    }
+  }
+
+  void _showRecipesManager() {
+    final drawerContext = context;
+    Navigator.pop(context); // Cerrar drawer
+
+    showModalBottomSheet(
+      context: drawerContext,
+      isScrollControlled: true,
+      builder: (modalContext) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Mis Recetas',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(modalContext),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: FutureBuilder<List<Recipe>>(
+                  future: DatabaseService.instance.getAllRecipes(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.restaurant_menu,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No hay recetas guardadas',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Agrega varios ingredientes y guárdalos como receta',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final recipes = snapshot.data!;
+
+                    return ListView.builder(
+                      controller: scrollController,
+                      itemCount: recipes.length,
+                      itemBuilder: (context, index) {
+                        final recipe = recipes[index];
+                        return Card(
+                          child: ListTile(
+                            leading: Text(
+                              recipe.emoji ?? '🍽️',
+                              style: const TextStyle(fontSize: 32),
+                            ),
+                            title: Text(recipe.name),
+                            subtitle: Text(
+                              'Creada: ${_formatDate(recipe.createdAt)}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.info_outline),
+                                  onPressed: () =>
+                                      _showRecipeDetails(modalContext, recipe),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _confirmDeleteRecipe(
+                                    modalContext,
+                                    recipe,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            onTap: () => _useRecipe(modalContext, recipe),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-          ListTile(
-            title: const Text('Mantener peso'),
-            subtitle: const Text('Sin ajuste calórico'),
-            onTap: () => Navigator.pop(context, 'maintain'),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays == 0) return 'Hoy';
+    if (diff.inDays == 1) return 'Ayer';
+    if (diff.inDays < 7) return 'Hace ${diff.inDays} días';
+    if (diff.inDays < 30) return 'Hace ${(diff.inDays / 7).floor()} semanas';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Future<void> _showRecipeDetails(BuildContext ctx, Recipe recipe) async {
+    final ingredients = await DatabaseService.instance.getRecipeIngredients(
+      recipe.id!,
+    );
+
+    showDialog(
+      context: ctx,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('${recipe.emoji ?? "🍽️"} ${recipe.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ingredientes:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ...ingredients.map(
+              (ing) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  '• ${ing.grams.toStringAsFixed(0)}g de ${ing.food.name}',
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cerrar'),
           ),
-          ListTile(
-            title: const Text('Subir peso'),
-            subtitle: const Text('Superávit de 300 kcal/día'),
-            onTap: () => Navigator.pop(context, 'surplus'),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _useRecipe(ctx, recipe);
+            },
+            child: const Text('Usar receta'),
           ),
         ],
       ),
-    ),
-  );
-  
-  if (goal != null && widget.profile != null) {
-    final maintenanceCalories = CalorieCalculator.calculateRecommendedCalories(
-    dob: widget.profile!.dob,
-    gender: widget.profile!.gender,
-    weight: widget.profile!.weight,
-    height: widget.profile!.height,
-    lifestyle: widget.profile!.lifestyle,
-    exerciseLevel: widget.profile!.exerciseLevel,
-    expenditure: widget.profile!.expenditure,
-  ).toInt();
-  
-  int goalCalories = maintenanceCalories;
-    
-    switch (goal) {
-      case 'deficit':
-        goalCalories -= 500;
-        break;
-      case 'surplus':
-        goalCalories += 300;
-        break;
-    }
-    
-    final updatedProfile = UserProfile(
-      id: widget.profile!.id,
-      name: widget.profile!.name,
-      email: widget.profile!.email,
-      dob: widget.profile!.dob,
-      gender: widget.profile!.gender,
-      weight: widget.profile!.weight,
-      height: widget.profile!.height,
-      lifestyle: widget.profile!.lifestyle,
-      exerciseLevel: widget.profile!.exerciseLevel,
-      expenditure: widget.profile!.expenditure,
-      carbs: widget.profile!.carbs,
-      protein: widget.profile!.protein,
-      fat: widget.profile!.fat,
-      goalType: goal,
-      goalCalories: goalCalories,
     );
-    
-    await DatabaseService.instance.saveUserProfile(updatedProfile);
-    if (widget.onProfileUpdated != null) {
-      widget.onProfileUpdated!(updatedProfile);
-    }
-    
-    if (widget.onHistoryChanged != null) {  // ← Agregar esto
-    widget.onHistoryChanged!();           // ← y esto
-    }
-    setState(() {});
   }
-}
 
-  // Diálogo de confirmación para borrar datos
+  Future<void> _useRecipe(BuildContext ctx, Recipe recipe) async {
+    await DatabaseService.instance.registerRecipeIngredients(recipe.id!);
+
+    Navigator.of(ctx).pop(); // Cerrar gestor de recetas
+
+    if (widget.onRecipeUsed != null) {
+      widget.onRecipeUsed!();
+    }
+
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: Text('Receta "${recipe.name}" registrada'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteRecipe(BuildContext ctx, Recipe recipe) async {
+    final confirm = await showDialog<bool>(
+      context: ctx,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Eliminar receta'),
+        content: Text('¿Eliminar "${recipe.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await DatabaseService.instance.deleteRecipe(recipe.id!);
+
+      Navigator.of(ctx).pop();
+      _showRecipesManager();
+
+      ScaffoldMessenger.of(ctx).showSnackBar(
+        SnackBar(content: Text('Receta "${recipe.name}" eliminada')),
+      );
+    }
+  }
+
   // Diálogo de confirmación para borrar datos
   void _showDeleteConfirmationDialog() async {
     final confirmed = await showDialog<bool>(
@@ -694,21 +929,25 @@ Future<void> _showGoalDialog() async {
             ],
           ),
           const Divider(),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Text(
-                    'OBJETIVO',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.flag),
-                  title: const Text('Objetivo de peso'),
-                  subtitle: Text(_getGoalText()),
-                  onTap: _showGoalDialog,
-                ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              'OBJETIVO',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.flag),
+            title: const Text('Objetivo de peso'),
+            subtitle: Text(_getGoalText()),
+            onTap: _showGoalDialog,
+          ),
           ExpansionTile(
-            initiallyExpanded: true,
+            initiallyExpanded: false,
             leading: const Icon(Icons.notifications_active),
             title: const Text('Recordatorios Diarios'),
             children: [
@@ -739,6 +978,18 @@ Future<void> _showGoalDialog() async {
             ],
           ),
           const Divider(),
+
+          // AGREGAR SECCIÓN DE RECETAS antes de "Borrar Datos":
+          ListTile(
+            leading: const Icon(Icons.restaurant_menu),
+            title: const Text('Recetas'),
+            subtitle: const Text('Gestionar comidas guardadas'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _showRecipesManager,
+          ),
+
+          const Divider(),
+          const Divider(),
           // Botón para borrar los datos
           ListTile(
             leading: const Icon(Icons.delete, color: Colors.red),
@@ -747,6 +998,16 @@ Future<void> _showGoalDialog() async {
               style: TextStyle(color: Colors.red),
             ),
             onTap: _showDeleteConfirmationDialog,
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.import_export),
+            title: const Text('Importar / Exportar'),
+            subtitle: const Text('Respaldar o restaurar datos'),
+            onTap: () {
+              Navigator.pop(context);
+              widget.onOpenImportExport();
+            },
           ),
           ListTile(
             leading: const Icon(Icons.info_outline, color: Colors.blue),

@@ -29,6 +29,11 @@ import 'screens/dashboard_screen.dart';
 import '../models/dashboard_stats.dart';
 import 'data/supplements_data.dart';
 
+import 'package:file_picker/file_picker.dart';
+import 'services/import_service.dart';
+import 'models/recipe.dart';
+import 'dart:io';
+
 final StreamController<double> _weightController = StreamController.broadcast();
 bool _isScaleConnected = false; // Agregar esta variabl
 
@@ -73,6 +78,9 @@ class _HomePageState extends State<HomePage> {
   List<FoodEntry> _history = [];
   List<FoodGroupDisplay> _displayGroups = [];
 
+  List<RecipeIngredient> _pendingIngredients = [];
+  bool _isBuildingMultiple = false;
+
   final FoodRepository _foodRepo = FoodRepository();
   final NutritionCalculator _calculator = NutritionCalculator();
   NutritionReport? _currentReport;
@@ -107,7 +115,7 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => _buildSupplementModal(supplement),
     );
 
-    print('DEBUG: result = $result'); // 👈 AGREGAR
+    //print('DEBUG: result = $result'); // 👈 AGREGAR
 
     if (result != null && result['dose'] != null) {
       final entry = FoodEntry(
@@ -117,13 +125,12 @@ class _HomePageState extends State<HomePage> {
         supplementDose: result['dose'],
       );
 
-      print(
-        'DEBUG: Guardando entry: ${entry.food.name}, dosis: ${entry.supplementDose}, isSupplement: ${entry.isSupplement}',
-      ); // 👈 AGREGAR
+      //print(        'DEBUG: Guardando entry: ${entry.food.name}, dosis: ${entry.supplementDose}, isSupplement: ${entry.isSupplement}',      ); // 👈 AGREGAR
 
       await DatabaseService.instance.createEntry(entry);
 
-      print('DEBUG: Entry guardado, recargando historial'); // 👈 AGREGAR
+      //print('DEBUG: Entry guardado, recargando historial'); // 👈 AGREGAR
+
       _loadHistory();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,6 +197,30 @@ class _HomePageState extends State<HomePage> {
                   const Divider(),
                 ],
 
+                if (supplement.id == 9004) ...[
+                  const Text(
+                    'Dosis común:',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _quickDoseButton(context, '150 mcg'),
+                      _quickDoseButton(context, '225 mcg'),
+                      _quickDoseButton(context, '325 mcg'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '⚠️ Límite seguro: 1100 mcg/día',
+                    style: TextStyle(fontSize: 12, color: Colors.orange),
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                ],
+
                 // Input libre
                 const Text(
                   'Dosis personalizada:',
@@ -233,7 +264,103 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Importar backup desde archivo JSON
+  Future<void> _importBackup() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result == null) return;
+
+      final file = File(result.files.single.path!);
+      final jsonContent = await file.readAsString();
+
+      if (!mounted) return;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Confirmar Importación'),
+          content: const Text(
+            '¿Deseas importar este backup?\n\n'
+            'ADVERTENCIA: Esto reemplazará todos tus datos actuales.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              child: const Text('Importar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final success = await ImportService.importFromJson(jsonContent);
+
+      if (!mounted) return;
+      Navigator.pop(context); // Cerrar loading
+
+      if (success) {
+        // 🔥 AGREGAR: Recargar perfil desde BD
+        final newProfile = await DatabaseService.instance.getUserProfile();
+        if (newProfile != null) {
+          widget.onUpdateProfile(newProfile); // Actualizar perfil en el padre
+        }
+
+        // Recargar todo lo demás
+        await _loadHistory();
+        await _loadDailyReminders();
+        await _loadSortOrder();
+        _buildDisplayGroups();
+
+        setState(() {}); // Forzar rebuild
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Backup importado exitosamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('❌ Error: Archivo de backup no válido'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error al importar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   // Mostrar modal de In/Out
+  // REEMPLAZA el método _showInOutModal() completo en home_page.dart:
+
   void _showInOutModal() {
     showModalBottomSheet(
       context: context,
@@ -244,6 +371,7 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -258,6 +386,8 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 16),
+
+            // SECCIÓN EXPORTAR
             const Text(
               'EXPORTAR DATOS DEL DÍA',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -280,25 +410,31 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-            //    ListTile(
-            //        leading: const Icon(Icons.upload_file),
-            //      title: const Text('Restaurar desde Archivo'),
-            //    onTap: () async {
-            //    // Aquí irá la lógica para seleccionar archivo
-            //  Navigator.pop(context);
-            //_importBackup();
-            //},
-            //         ),
-            // const SizedBox(height: 24),
-            // const Text(
-            //   'IMPORTAR DATOS',
-            //   style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            // ),
-            // const SizedBox(height: 12),
-            // ElevatedButton(
-            //  onPressed: _importFromFile,
-            //   child: const Text('Importar desde Archivo'),
-            // ),
+
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+
+            // SECCIÓN IMPORTAR
+            const Text(
+              'IMPORTAR DATOS',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context); // Cerrar el modal primero
+                await _importBackup(); // Ejecutar la importación
+              },
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Restaurar desde Archivo'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+
             const SizedBox(height: 16),
           ],
         ),
@@ -381,34 +517,6 @@ class _HomePageState extends State<HomePage> {
         },
       ),
     );
-  }
-
-  Future<void> _importBackup() async {
-    // Por ahora mostrar diálogo de confirmación
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Restaurar Backup'),
-        content: const Text(
-          'Esto sobrescribirá todos tus datos actuales. ¿Continuar?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Restaurar'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    // TODO: Implementar selector de archivo
-    // Por ahora solo la estructura
   }
 
   Future<void> _loadDailyReminders() async {
@@ -509,6 +617,147 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
+  }
+
+  // AGREGAR esta función en home_page.dart, cerca de las otras funciones de modales
+
+  /// Modal para registrar Yodo
+  Future<void> _showIodineModal() async {
+    final TextEditingController doseController = TextEditingController();
+
+    final result = await showModalBottomSheet<Map<String, dynamic>?>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          left: 24,
+          right: 24,
+          top: 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  '🧂 Yodo (suplemento)',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Dosis del suplemento',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+
+            // Botones de dosis predefinidas
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () =>
+                        Navigator.pop(context, {'dose': '150 mcg'}),
+                    child: const Text('150 mcg'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () =>
+                        Navigator.pop(context, {'dose': '225 mcg'}),
+                    child: const Text('225 mcg'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () =>
+                        Navigator.pop(context, {'dose': '325 mcg'}),
+                    child: const Text('325 mcg'),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // Input personalizado
+            const Text(
+              'O ingresa una dosis personalizada:',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: doseController,
+                    keyboardType: TextInputType.text,
+                    decoration: const InputDecoration(
+                      hintText: 'Ej: 400 mcg, 2000 UI',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    if (doseController.text.isNotEmpty) {
+                      Navigator.pop(context, {'dose': doseController.text});
+                    }
+                  },
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+            const Text(
+              '⚠️ Límite seguro: 1100 mcg/día',
+              style: TextStyle(fontSize: 11, color: Colors.orange),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+
+    // Si se seleccionó una dosis, registrarla
+    if (result != null && result['dose'] != null) {
+      final iodineFood = supplementsList.firstWhere((s) => s.id == 9004);
+      final entry = FoodEntry(
+        food: iodineFood,
+        grams: 0, // Los suplementos no tienen gramos
+        isSupplement: true,
+        supplementDose: result['dose'],
+      );
+
+      await DatabaseService.instance.createEntry(entry);
+      _loadHistory();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Yodo registrado: ${result['dose']}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   // Exportar como texto
@@ -643,7 +892,7 @@ class _HomePageState extends State<HomePage> {
         weightStream: _weightController.stream.map(
           (w) => (w - _tareWeight).abs(),
         ),
-         onTare: _setTare,
+        onTare: _setTare,
       ),
     );
 
@@ -816,14 +1065,14 @@ class _HomePageState extends State<HomePage> {
       _tareWeight = _weight;
     });
 
-      // Solo mostrar snackbar si la balanza está conectada
-  if (_isScaleConnected) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Tara establecida: ${_weight.toStringAsFixed(1)}g'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // Solo mostrar snackbar si la balanza está conectada
+    if (_isScaleConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tara establecida: ${_weight.toStringAsFixed(1)}g'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -860,26 +1109,210 @@ class _HomePageState extends State<HomePage> {
         weightStream: _weightController.stream.map(
           (w) => (w - _tareWeight).abs(),
         ),
-         onTare: _setTare,
+        onTare: _setTare,
       ),
     );
 
     if (grams != null && grams > 0) {
       final fullFood = _foodRepo.getFoodById(food.id!);
       if (fullFood != null) {
-        final newEntry = FoodEntry(food: fullFood, grams: grams);
+        // Agregar a la lista temporal
+        _pendingIngredients.add(
+          RecipeIngredient(
+            recipeId: 0, // Temporal, se asigna al guardar
+            food: fullFood,
+            grams: grams,
+          ),
+        );
 
-        // Guarda en la base de datos
-        await DatabaseService.instance.createEntry(newEntry);
+        // Mostrar confirmación con opciones
+        if (!mounted) return;
 
-        // Incrementar contador de uso
-        await DatabaseService.instance.incrementFoodUsage(
-          food.id!,
-        ); // 👈 Agregar esto
+        final action = await showDialog<String>(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Ingrediente agregado'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '✓ ${grams.toStringAsFixed(0)}g de ${fullFood.name}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                if (_pendingIngredients.length > 1) ...[
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Ingredientes en esta comida:',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  ..._pendingIngredients.map(
+                    (ing) => Text(
+                      '• ${ing.grams.toStringAsFixed(0)}g de ${ing.food.name}',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton.icon(
+                onPressed: () => Navigator.pop(context, 'add_more'),
+                icon: const Icon(Icons.add),
+                label: const Text('Agregar otro ingrediente'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, 'finish'),
+                child: const Text('Finalizar'),
+              ),
+            ],
+          ),
+        );
 
-        // Recarga el historial desde la base de datos para tener todo sincronizado
-        _setTare();
-        _loadHistory();
+        if (action == 'add_more') {
+          // Volver a abrir la lista de alimentos para agregar otro
+          setState(() {
+            _isBuildingMultiple = true;
+          });
+          // No hacer nada más, el usuario volverá a seleccionar otro alimento
+        } else if (action == 'finish') {
+          // Registrar todos los ingredientes
+          await _finishAddingIngredients();
+        }
+      }
+    }
+  }
+
+  Future<void> _finishAddingIngredients() async {
+    if (_pendingIngredients.isEmpty) return;
+
+    // Si hay más de un ingrediente, preguntar si guardar como receta
+    if (_pendingIngredients.length > 1 && mounted) {
+      final saveAsRecipe = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('¿Guardar como receta?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Has agregado varios ingredientes:'),
+              const SizedBox(height: 8),
+              ..._pendingIngredients.map(
+                (ing) => Text(
+                  '• ${ing.grams.toStringAsFixed(0)}g de ${ing.food.name}',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '¿Quieres guardar esto como una receta para usarla más tarde?',
+                style: TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('No, solo registrar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Sí, guardar receta'),
+            ),
+          ],
+        ),
+      );
+
+      if (saveAsRecipe == true) {
+        await _saveAsRecipe();
+      }
+    }
+
+    // Registrar todos los ingredientes en el historial
+    for (final ingredient in _pendingIngredients) {
+      final newEntry = FoodEntry(
+        food: ingredient.food,
+        grams: ingredient.grams,
+      );
+      await DatabaseService.instance.createEntry(newEntry);
+      await DatabaseService.instance.incrementFoodUsage(ingredient.food.id!);
+    }
+
+    // Limpiar la lista temporal
+    setState(() {
+      _pendingIngredients.clear();
+      _isBuildingMultiple = false;
+    });
+
+    _setTare();
+    _loadHistory();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ingredientes registrados'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _saveAsRecipe() async {
+    final nameController = TextEditingController();
+
+    final recipeName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nombre de la receta'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            hintText: 'Ej: Desayuno habitual',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                Navigator.pop(context, nameController.text);
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+
+    if (recipeName != null && recipeName.isNotEmpty) {
+      final recipe = Recipe(
+        name: recipeName,
+        emoji: '🍽️',
+        createdAt: DateTime.now(),
+      );
+
+      await DatabaseService.instance.saveRecipe(recipe, _pendingIngredients);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Receta "$recipeName" guardada'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     }
   }
@@ -910,7 +1343,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-// 1. Obtenemos la lista completa de alimentos desde el repositorio.
+    // 1. Obtenemos la lista completa de alimentos desde el repositorio.
     final allFoods = _foodRepo.getAllFoods();
 
     // 2. Definimos la lista que se mostrará en pantalla.
@@ -921,14 +1354,14 @@ class _HomePageState extends State<HomePage> {
       displayItems = _displayGroups;
     } else {
       // 4. Mapa de nutrientes para filtrado
-final nutrientMap = {
+      final nutrientMap = {
         // Macronutrientes
         'proteina': (Food f) => f.proteins,
         'proteínas': (Food f) => f.proteins,
         'carbohidratos': (Food f) => f.carbohydrates,
         'fibra': (Food f) => f.fiber,
         'grasas': (Food f) => f.totalFats,
-        
+
         // Ácidos grasos
         'omega3': (Food f) => f.omega3,
         'omega-3': (Food f) => f.omega3,
@@ -936,7 +1369,7 @@ final nutrientMap = {
         'omega-6': (Food f) => f.omega6,
         'omega9': (Food f) => f.omega9,
         'omega-9': (Food f) => f.omega9,
-        
+
         // Vitaminas
         'vitamina a': (Food f) => f.vitaminA,
         'vitamina c': (Food f) => f.vitaminC,
@@ -967,7 +1400,7 @@ final nutrientMap = {
         'folato': (Food f) => f.vitaminB9,
         'vitamina b12': (Food f) => f.vitaminB12,
         'b12': (Food f) => f.vitaminB12,
-        
+
         // Minerales
         'calcio': (Food f) => f.calcium,
         'hierro': (Food f) => f.iron,
@@ -981,7 +1414,7 @@ final nutrientMap = {
         'manganeso': (Food f) => f.manganese,
         'selenio': (Food f) => f.selenium,
         'yodo': (Food f) => f.iodine,
-        
+
         // Aminoácidos
         'histidina': (Food f) => f.histidine,
         'isoleucina': (Food f) => f.isoleucine,
@@ -996,7 +1429,7 @@ final nutrientMap = {
       };
 
       final query = _searchQuery.toLowerCase().trim();
-      
+
       // Verificar si la búsqueda coincide con un nutriente
       if (nutrientMap.containsKey(query)) {
         // Ordenar por contenido del nutriente
@@ -1108,6 +1541,11 @@ final nutrientMap = {
           onHistoryChanged: () {
             _loadHistory(); // Recarga el historial
           },
+          onOpenImportExport: _showInOutModal,
+          onRecipeUsed: () {
+            _loadHistory();
+            _setTare();
+          },
           onSortOrderChanged: (newOrder) async {
             setState(() => _sortOrder = newOrder);
             final counts = await DatabaseService.instance.getFoodUsageCounts();
@@ -1148,10 +1586,16 @@ final nutrientMap = {
                             ),
                           const Spacer(),
                           BluetoothManager(
-                            onWeightChanged: (grams) {
-                              setState(() => _weight = grams);
-                              _weightController.add(grams);
-                            },
+                              onWeightChanged: (grams) {
+                                setState(() {
+                                  _weight = grams;
+                                  // Si el peso es 0 (desconexión), resetear también la tara
+                                  if (grams == 0) {
+                                    _tareWeight = 0;
+                                  }
+                                });
+                                _weightController.add(grams);
+                              },
                             onConnectionChanged: (isConnected) {
                               setState(() => _isScaleConnected = isConnected);
                             },

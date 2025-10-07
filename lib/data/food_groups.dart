@@ -88,14 +88,30 @@ List<FoodGroupDisplay> getFoodGroups(
       emoji: "🍓",
       items: allFoods
           .where(
-            (f) => [79, 80, 81, 91, 61, 73, 94, 96, 97, 98, 99].contains(f.id),
+            (f) => [
+              79,
+              80,
+              81,
+              91,
+              73,
+              94,
+              96,
+              97,
+              98,
+              99,
+              124,
+              125,
+              126,
+            ].contains(f.id),
           )
           .toList(),
     ),
     FoodGroupDisplay(
       groupName: "Frutos Secos",
       emoji: "🥜",
-      items: allFoods.where((f) => [89, 90, 117, 118, 119, 120].contains(f.id)).toList(),
+      items: allFoods
+          .where((f) => [89, 90, 117, 118, 119, 120].contains(f.id))
+          .toList(),
     ),
     FoodGroupDisplay(
       groupName: "Kiwi",
@@ -117,7 +133,9 @@ List<FoodGroupDisplay> getFoodGroups(
     FoodGroupDisplay(
       groupName: "Semillas",
       emoji: "🌱",
-      items: allFoods.where((f) => [30, 58, 59, 60, 121, 122].contains(f.id)).toList(),
+      items: allFoods
+          .where((f) => [30, 58, 59, 60, 121, 122].contains(f.id))
+          .toList(),
     ),
     FoodGroupDisplay(
       groupName: "Especias",
@@ -167,6 +185,11 @@ List<FoodGroupDisplay> getFoodGroups(
       items: allFoods.where((f) => f.id == 5).toList(),
     ),
     FoodGroupDisplay(
+      groupName: "Naranja",
+      emoji: "🍊",
+      items: allFoods.where((f) => f.id == 123).toList(),
+    ),
+    FoodGroupDisplay(
       groupName: "Lechuga",
       emoji: "🥬",
       items: allFoods.where((f) => f.id == 21).toList(),
@@ -175,6 +198,11 @@ List<FoodGroupDisplay> getFoodGroups(
       groupName: "Maní",
       emoji: "🥜",
       items: allFoods.where((f) => f.id == 4).toList(),
+    ),
+    FoodGroupDisplay(
+      groupName: "Limón",
+      emoji: "🍋",
+      items: allFoods.where((f) => f.id == 61).toList(),
     ),
     FoodGroupDisplay(
       groupName: "Nueces",

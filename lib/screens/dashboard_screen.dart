@@ -25,10 +25,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadStats() async {
     setState(() => _loading = true);
-    
+
     final now = DateTime.now();
     DateTime startDate;
-    
+
     switch (_selectedPeriod) {
       case '7days':
         startDate = now.subtract(const Duration(days: 7));
@@ -42,9 +42,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
       default:
         startDate = now.subtract(const Duration(days: 7));
     }
-    
-    final stats = await DatabaseService.instance.getDashboardStats(startDate, now);
-    
+
+    final stats = await DatabaseService.instance.getDashboardStats(
+      startDate,
+      now,
+    );
+
     setState(() {
       _stats = stats;
       _loading = false;
@@ -54,9 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-      ),
+      appBar: AppBar(title: const Text('Dashboard')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -78,21 +79,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _loadStats();
                     },
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   _buildMacrosCard(),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   _buildCaloriesChart(),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   _buildTopFoods(),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   _buildHabitsCompletion(),
                 ],
               ),
@@ -159,7 +160,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String macroKey,
   ) {
     final isSelected = _selectedMacro == macroKey;
-    
+
     return InkWell(
       onTap: () {
         setState(() {
@@ -216,7 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Determinar título y color según el macro seleccionado
     String chartTitle;
     Color chartColor;
-    
+
     switch (_selectedMacro) {
       case 'protein':
         chartTitle = 'Tendencia de Proteínas';
@@ -257,6 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     LineChartBarData(
                       spots: _getChartSpots(),
                       isCurved: true,
+                      curveSmoothness: 0.35,
                       color: chartColor,
                       barWidth: 3,
                       dotData: const FlDotData(show: true),
@@ -271,84 +273,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-List<FlSpot> _getChartSpots() {
-  return _stats!.dailyData.asMap().entries.map((entry) {
-    double value;
-    switch (_selectedMacro) {
-      case 'protein':
-        value = entry.value.protein;
-        break;
-      case 'carbs':
-        value = entry.value.carbs;
-        break;
-      case 'fat':
-        value = entry.value.fat;
-        break;
-      default:
-        value = entry.value.calories;
-    }
-    
-    return FlSpot(entry.key.toDouble(), value);
-  }).toList();
-}
+  List<FlSpot> _getChartSpots() {
+    return _stats!.dailyData.asMap().entries.map((entry) {
+      double value;
+      switch (_selectedMacro) {
+        case 'protein':
+          value = entry.value.protein;
+          break;
+        case 'carbs':
+          value = entry.value.carbs;
+          break;
+        case 'fat':
+          value = entry.value.fat;
+          break;
+        default:
+          value = entry.value.calories;
+      }
 
-Widget _buildTopFoods() {
-  // Ordenar según el criterio seleccionado
-  final sortedFoods = _stats!.topFoods.toList();
-  if (_topFoodsSort == 'weight') {
-    sortedFoods.sort((a, b) => b.totalGrams.compareTo(a.totalGrams));
+      return FlSpot(entry.key.toDouble(), value);
+    }).toList();
   }
-  // Si es 'times' ya viene ordenado del getDashboardStats
 
-  return Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Top 5 Alimentos',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          
-          // Toggle
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: 'times',
-                label: Text('Más consumidos'),
-              ),
-              ButtonSegment(
-                value: 'weight',
-                label: Text('Mayor peso'),
-              ),
-            ],
-            selected: {_topFoodsSort},
-            onSelectionChanged: (Set<String> newSelection) {
-              setState(() {
-                _topFoodsSort = newSelection.first;
-              });
-            },
-          ),
-          
-          const SizedBox(height: 12),
-          
-          ...sortedFoods.take(5).map((food) => ListTile(
-            dense: true,
-            leading: Text(food.emoji, style: const TextStyle(fontSize: 24)),
-            title: Text(food.fullName ?? food.name),
-            trailing: Text(
-              _topFoodsSort == 'times'
-                  ? '${food.timesConsumed}x'
-                  : '${food.totalGrams.toStringAsFixed(0)}g',
+  Widget _buildTopFoods() {
+    // Ordenar según el criterio seleccionado
+    final sortedFoods = _stats!.topFoods.toList();
+    if (_topFoodsSort == 'weight') {
+      sortedFoods.sort((a, b) => b.totalGrams.compareTo(a.totalGrams));
+    }
+    // Si es 'times' ya viene ordenado del getDashboardStats
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Top 5 Alimentos',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          )),
-        ],
+            const SizedBox(height: 12),
+
+            // Toggle
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'times', label: Text('Más consumidos')),
+                ButtonSegment(value: 'weight', label: Text('Mayor peso')),
+              ],
+              selected: {_topFoodsSort},
+              onSelectionChanged: (Set<String> newSelection) {
+                setState(() {
+                  _topFoodsSort = newSelection.first;
+                });
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            ...sortedFoods
+                .take(5)
+                .map(
+                  (food) => ListTile(
+                    dense: true,
+                    leading: Text(
+                      food.emoji,
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                    title: Text(food.fullName ?? food.name),
+                    trailing: Text(
+                      _topFoodsSort == 'times'
+                          ? '${food.timesConsumed}x'
+                          : '${food.totalGrams.toStringAsFixed(0)}g',
+                    ),
+                  ),
+                ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildHabitsCompletion() {
     if (_stats!.habitCompletion.isEmpty) {
@@ -369,7 +372,8 @@ Widget _buildTopFoods() {
             ),
             const SizedBox(height: 12),
             ..._stats!.habitCompletion.entries.map((entry) {
-              final percentage = (entry.value / totalDays * 100).toStringAsFixed(0);
+              final percentage = (entry.value / totalDays * 100)
+                  .toStringAsFixed(0);
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
