@@ -1,8 +1,9 @@
 name: acofoodflutter
-description: "A new Flutter project."
+description: "Aplicación de seguimiento nutricional con integración de balanza inteligente y análisis detallado de macronutrientes, vitaminas y minerales."
+
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.9.2
@@ -35,6 +36,8 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/app_icons/avocado.png"
+  adaptive_icon_background: "#4CAF50"
+  adaptive_icon_foreground: "assets/app_icons/avocado.png"
 
 flutter:
   uses-material-design: true

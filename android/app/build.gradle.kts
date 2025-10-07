@@ -16,9 +16,8 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.arielaco.acofood"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
-
+	compileSdk = 36
+	
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -29,14 +28,11 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.arielaco.acofood"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 26
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = flutter.minSdkVersion
+        targetSdk = 34
+        versionCode = 2
+        versionName = "1.0.1"
     }
 
 signingConfigs {
