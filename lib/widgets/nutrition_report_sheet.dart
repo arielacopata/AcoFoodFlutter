@@ -7,13 +7,15 @@ import 'nutrient_progress_row.dart';
 import 'package:flutter/services.dart'; // Para Clipboard
 import 'package:intl/intl.dart'; // Para formatear la fecha
 
-class NutritionReportSheet extends StatelessWidget {
+class NutritionReportSheet extends StatefulWidget {
   final NutritionReport report;
   final double totalCaloriesGoal;
   final double proteinGoalGrams;
   final double carbsGoalGrams;
   final double fatGoalGrams;
   final double userWeight;
+  final DateTime selectedDate;
+  final Function(DateTime newDate) onDateChanged;
 
   const NutritionReportSheet({
     super.key,
@@ -22,9 +24,15 @@ class NutritionReportSheet extends StatelessWidget {
     required this.proteinGoalGrams,
     required this.carbsGoalGrams,
     required this.fatGoalGrams,
+    required this.selectedDate,
+    required this.onDateChanged,
     this.userWeight = 70.0, // Default 70kg
   });
+  @override
+  State<NutritionReportSheet> createState() => _NutritionReportSheetState();
+}
 
+class _NutritionReportSheetState extends State<NutritionReportSheet> {
   static const List<String> nutrientOrder = [
     'calories',
     'proteins',
@@ -83,7 +91,7 @@ class NutritionReportSheet extends StatelessWidget {
       'calories',
       'Calorías',
       'kcal',
-      totalCaloriesGoal,
+      widget.totalCaloriesGoal,
       'Meta',
     );
     _addNutrientLine(
@@ -91,7 +99,7 @@ class NutritionReportSheet extends StatelessWidget {
       'proteins',
       'Proteínas',
       'g',
-      proteinGoalGrams,
+      widget.proteinGoalGrams,
       'Meta',
     );
     _addNutrientLine(
@@ -99,7 +107,7 @@ class NutritionReportSheet extends StatelessWidget {
       'totalFats',
       'Grasas Totales',
       'g',
-      fatGoalGrams,
+      widget.fatGoalGrams,
       'Meta',
     );
     _addNutrientLine(
@@ -107,7 +115,7 @@ class NutritionReportSheet extends StatelessWidget {
       'carbohydrates',
       'Carbohidratos',
       'g',
-      carbsGoalGrams,
+      widget.carbsGoalGrams,
       'Meta',
     );
     buffer.writeln();
@@ -209,54 +217,88 @@ class NutritionReportSheet extends StatelessWidget {
       maxChildSize: 0.9,
       expand: false,
       builder: (_, controller) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10.0),
-                child: Container(
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(10),
+        return GestureDetector(
+          onHorizontalDragEnd: (details) {
+            if (details.primaryVelocity!.abs() < 300) return;
+
+            if (details.primaryVelocity! > 0) {
+              // Swipe derecha → día anterior (siempre permitido)
+              final newDate = widget.selectedDate.subtract(
+                const Duration(days: 1),
+              );
+              widget.onDateChanged(newDate);
+            } else if (details.primaryVelocity! < 0) {
+              // Swipe izquierda → día siguiente (solo si no es futuro)
+              final today = DateTime.now();
+              final todayStart = DateTime(today.year, today.month, today.day);
+              final selectedStart = DateTime(
+                widget.selectedDate.year,
+                widget.selectedDate.month,
+                widget.selectedDate.day,
+              );
+
+              // Si ya estás viendo hoy, no permitir ir al futuro
+              if (selectedStart.isAtSameMomentAs(todayStart) ||
+                  selectedStart.isAfter(todayStart)) {
+                return; // Bloquear
+              }
+
+              final newDate = widget.selectedDate.add(const Duration(days: 1));
+              widget.onDateChanged(newDate);
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10.0),
+                  child: Container(
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade400,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
-              ),
-              const Text(
-                "Reporte Nutricional",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: ListView.builder(
-                  controller: controller,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: nutrientOrder.length,
-                  itemBuilder: (context, index) {
-                    final nutrientKey = nutrientOrder[index];
-                    final row = _buildNutrientRow(nutrientKey);
-                    return row ?? const SizedBox.shrink();
-                  },
+                _buildDateHeader(),
+                const Text(
+                  "Reporte Nutricional",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
-              ),
-              // Al final de la Column, después del ListView
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.share),
-                  label: const Text('Exportar Reporte'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.builder(
+                    controller: controller,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: nutrientOrder.length,
+                    itemBuilder: (context, index) {
+                      final nutrientKey = nutrientOrder[index];
+                      final row = _buildNutrientRow(nutrientKey);
+                      return row ?? const SizedBox.shrink();
+                    },
                   ),
-                  onPressed: () => _exportReport(context),
                 ),
-              ),
-            ],
+                // Al final de la Column, después del ListView
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.share),
+                    label: const Text('Exportar Reporte'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                    onPressed: () => _exportReport(context),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -273,20 +315,28 @@ class NutritionReportSheet extends StatelessWidget {
     Map<String, dynamic>? goalData;
 
     if (nutrientKey == 'calories') {
-      goalData = {'value': totalCaloriesGoal, 'unit': 'kcal', 'type': 'Meta'};
+      goalData = {
+        'value': widget.totalCaloriesGoal,
+        'unit': 'kcal',
+        'type': 'Meta',
+      };
     } else if (nutrientKey == 'proteins') {
-      goalData = {'value': proteinGoalGrams, 'unit': 'g', 'type': 'Meta'};
+      goalData = {
+        'value': widget.proteinGoalGrams,
+        'unit': 'g',
+        'type': 'Meta',
+      };
     } else if (nutrientKey == 'carbohydrates') {
-      goalData = {'value': carbsGoalGrams, 'unit': 'g', 'type': 'Meta'};
+      goalData = {'value': widget.carbsGoalGrams, 'unit': 'g', 'type': 'Meta'};
     } else if (nutrientKey == 'totalFats') {
-      goalData = {'value': fatGoalGrams, 'unit': 'g', 'type': 'Meta'};
+      goalData = {'value': widget.fatGoalGrams, 'unit': 'g', 'type': 'Meta'};
     } else {
       goalData = nutrientGoals[nutrientKey];
 
       // Convertir aminoácidos de mg/kg/day a gramos totales
       if (goalData != null && goalData['unit'] == 'mg/kg/day') {
         final mgPerKg = goalData['value'] as double;
-        final totalMg = mgPerKg * userWeight;
+        final totalMg = mgPerKg * widget.userWeight;
         final totalGrams = totalMg / 1000; // convertir mg a g
 
         goalData = {'value': totalGrams, 'unit': 'g', 'type': goalData['type']};
@@ -377,91 +427,173 @@ class NutritionReportSheet extends StatelessWidget {
   double _getNutrientValue(String key) {
     switch (key) {
       case 'calories':
-        return report.calories;
+        return widget.report.calories;
       case 'proteins':
-        return report.proteins;
+        return widget.report.proteins;
       case 'carbohydrates':
-        return report.carbohydrates;
+        return widget.report.carbohydrates;
       case 'totalFats':
-        return report.totalFats;
+        return widget.report.totalFats;
       case 'fiber':
-        return report.fiber;
+        return widget.report.fiber;
       case 'saturatedFats':
-        return report.saturatedFats;
+        return widget.report.saturatedFats;
       case 'omega3':
-        return report.omega3;
+        return widget.report.omega3;
       case 'omega6':
-        return report.omega6;
+        return widget.report.omega6;
       case 'calcium':
-        return report.calcium;
+        return widget.report.calcium;
       case 'iron':
-        return report.iron;
+        return widget.report.iron;
       case 'magnesium':
-        return report.magnesium;
+        return widget.report.magnesium;
       case 'phosphorus':
-        return report.phosphorus;
+        return widget.report.phosphorus;
       case 'potassium':
-        return report.potassium;
+        return widget.report.potassium;
       case 'sodium':
-        return report.sodium;
+        return widget.report.sodium;
       case 'zinc':
-        return report.zinc;
+        return widget.report.zinc;
       case 'copper':
-        return report.copper;
+        return widget.report.copper;
       case 'manganese':
-        return report.manganese;
+        return widget.report.manganese;
       case 'selenium':
-        return report.selenium;
+        return widget.report.selenium;
       case 'vitaminA':
-        return report.vitaminA;
+        return widget.report.vitaminA;
       case 'vitaminC':
-        return report.vitaminC;
+        return widget.report.vitaminC;
       case 'vitaminE':
-        return report.vitaminE;
+        return widget.report.vitaminE;
       case 'vitaminK':
-        return report.vitaminK;
+        return widget.report.vitaminK;
       case 'vitaminB1':
-        return report.vitaminB1;
+        return widget.report.vitaminB1;
       case 'vitaminB2':
-        return report.vitaminB2;
+        return widget.report.vitaminB2;
       case 'vitaminB3':
-        return report.vitaminB3;
+        return widget.report.vitaminB3;
       case 'vitaminB4':
-        return report.vitaminB4;
+        return widget.report.vitaminB4;
       case 'vitaminB5':
-        return report.vitaminB5;
+        return widget.report.vitaminB5;
       case 'vitaminB6':
-        return report.vitaminB6;
+        return widget.report.vitaminB6;
       case 'vitaminB7':
-        return report.vitaminB7;
+        return widget.report.vitaminB7;
       case 'vitaminB9':
-        return report.vitaminB9;
+        return widget.report.vitaminB9;
       case 'vitaminB12':
-        return report.vitaminB12;
+        return widget.report.vitaminB12;
       case 'vitaminD':
-        return report.vitaminD;
+        return widget.report.vitaminD;
       case 'iodine':
-        return report.iodine;
+        return widget.report.iodine;
       case 'histidine':
-        return report.histidine;
+        return widget.report.histidine;
       case 'isoleucine':
-        return report.isoleucine;
+        return widget.report.isoleucine;
       case 'leucine':
-        return report.leucine;
+        return widget.report.leucine;
       case 'lysine':
-        return report.lysine;
+        return widget.report.lysine;
       case 'methionine':
-        return report.methionine;
+        return widget.report.methionine;
       case 'phenylalanine':
-        return report.phenylalanine;
+        return widget.report.phenylalanine;
       case 'threonine':
-        return report.threonine;
+        return widget.report.threonine;
       case 'tryptophan':
-        return report.tryptophan;
+        return widget.report.tryptophan;
       case 'valine':
-        return report.valine;
+        return widget.report.valine;
       default:
         return 0.0;
     }
+  }
+
+  Widget _buildDateHeader() {
+    final today = DateTime.now();
+    final todayStart = DateTime(today.year, today.month, today.day);
+    final selectedStart = DateTime(
+      widget.selectedDate.year,
+      widget.selectedDate.month,
+      widget.selectedDate.day,
+    );
+
+    final isToday = selectedStart.isAtSameMomentAs(todayStart);
+    final isFuture = selectedStart.isAfter(todayStart);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed: () {
+              final newDate = widget.selectedDate.subtract(
+                const Duration(days: 1),
+              );
+              widget.onDateChanged(newDate);
+            },
+          ),
+          Expanded(
+            child: Column(
+              children: [
+                Text(
+                  DateFormat(
+                    'EEEE d \'de\' MMMM',
+                    'es',
+                  ).format(widget.selectedDate),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (isToday)
+                  Text(
+                    'Hoy',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.chevron_right,
+              color: isFuture ? Colors.grey.shade300 : null,
+            ),
+            onPressed: () {
+              // Verificar si ya estamos en hoy
+              final today = DateTime.now();
+              final todayStart = DateTime(today.year, today.month, today.day);
+              final selectedStart = DateTime(
+                widget.selectedDate.year,
+                widget.selectedDate.month,
+                widget.selectedDate.day,
+              );
+
+              // Si ya estás viendo hoy o en el futuro, bloquear
+              if (selectedStart.isAtSameMomentAs(todayStart) ||
+                  selectedStart.isAfter(todayStart)) {
+                return; // No permitir avanzar
+              }
+
+              final newDate = widget.selectedDate.add(const Duration(days: 1));
+              widget.onDateChanged(newDate);
+            },
+          ),
+        ],
+      ),
+    );
   }
 }

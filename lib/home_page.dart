@@ -1099,6 +1099,68 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  // Método 1: Cargar historial de una fecha específica
+  Future<void> _loadHistoryForDate(DateTime date) async {
+    final entries = await DatabaseService.instance.getEntriesByDate(date);
+
+    setState(() {
+      _selectedDate = date;
+      _history = entries;
+    });
+
+    await _recalculateTotals();
+  }
+
+  // Método 3: Mostrar el modal del reporte (reutilizable)
+  Future<void> _showNutritionReport() async {
+    if (_currentReport == null) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final totalCaloriesGoal =
+              widget.profile?.goalCalories?.toDouble() ??
+              CalorieCalculator.calculateRecommendedCalories(
+                dob: widget.profile?.dob ?? DateTime(1990),
+                gender: widget.profile?.gender ?? 'male',
+                weight: widget.profile?.weight ?? 70.0,
+                height: widget.profile?.height ?? 170.0,
+                lifestyle: widget.profile?.lifestyle ?? '2',
+                exerciseLevel: widget.profile?.exerciseLevel ?? '2',
+                expenditure: widget.profile?.expenditure,
+              );
+
+          final proteinGoalGrams =
+              (totalCaloriesGoal * (widget.profile?.protein ?? 20) / 100) / 4;
+          final carbsGoalGrams =
+              (totalCaloriesGoal * (widget.profile?.carbs ?? 65) / 100) / 4;
+          final fatGoalGrams =
+              (totalCaloriesGoal * (widget.profile?.fat ?? 15) / 100) / 9;
+
+          return NutritionReportSheet(
+            report: _currentReport!,
+            totalCaloriesGoal: totalCaloriesGoal,
+            proteinGoalGrams: proteinGoalGrams,
+            carbsGoalGrams: carbsGoalGrams,
+            fatGoalGrams: fatGoalGrams,
+            userWeight: widget.profile?.weight ?? 70.0,
+            selectedDate: _selectedDate,
+            onDateChanged: (newDate) async {
+              await _loadHistoryForDate(newDate);
+              if (mounted) {
+                setModalState(() {}); // Actualiza el modal sin cerrarlo
+              }
+            },
+          );
+        },
+      ),
+    );
+    await _loadHistory();
+  }
+
   Future<void> _openFoodBottomSheet(Food food) async {
     _searchFocusNode.unfocus();
     final grams = await showModalBottomSheet<double?>(
@@ -1889,27 +1951,16 @@ class _HomePageState extends State<HomePage> {
                                         tapTargetSize: MaterialTapTargetSize
                                             .shrinkWrap, // Reduce el área táctil
                                       ),
-                                      onPressed: () {
+                                      onPressed: () async {
                                         if (_currentReport != null) {
-                                          showModalBottomSheet(
-                                            context: context,
-                                            isScrollControlled: true,
-                                            backgroundColor: Colors.transparent,
-                                            builder: (context) =>
-                                                NutritionReportSheet(
-                                                  report: _currentReport!,
-                                                  totalCaloriesGoal:
-                                                      totalCaloriesGoal,
-                                                  proteinGoalGrams:
-                                                      proteinGoalGrams,
-                                                  carbsGoalGrams:
-                                                      carbsGoalGrams,
-                                                  fatGoalGrams: fatGoalGrams,
-                                                  userWeight:
-                                                      widget.profile.weight ??
-                                                      70.0,
-                                                ),
-                                          );
+                                          final originalDate = _selectedDate;
+                                          await _showNutritionReport();
+
+                                          // Cuando el modal se cierre, verificar si cambió la fecha
+                                          if (_selectedDate != originalDate) {
+                                            // La fecha cambió dentro del modal, recargar vista
+                                            await _loadHistory();
+                                          }
                                         }
                                       },
                                       child: const Text(
