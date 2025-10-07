@@ -1586,16 +1586,21 @@ class _HomePageState extends State<HomePage> {
                             ),
                           const Spacer(),
                           BluetoothManager(
-                              onWeightChanged: (grams) {
-                                setState(() {
-                                  _weight = grams;
-                                  // Si el peso es 0 (desconexión), resetear también la tara
-                                  if (grams == 0) {
-                                    _tareWeight = 0;
-                                  }
-                                });
-                                _weightController.add(grams);
-                              },
+                            onWeightChanged: (grams) {
+                              setState(() => _weight = grams);
+                              _weightController.add(grams);
+                            },
+                            onConnectionChanged: (isConnected) {
+                              setState(() {
+                                _isScaleConnected = isConnected;
+                                if (!isConnected) {
+                                  _weight = 0.0;
+                                  _tareWeight = 0.0; // También resetea la tara
+                                  _weightController.add(0.0);
+                                }
+                              });
+                            },
+                          ),
                           // Botones más compactos
                           if (_tareWeight == 0)
                             OutlinedButton.icon(

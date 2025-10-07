@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../models/nutrition_report.dart';
 import '../data/nutrient_goals.dart';
 import 'nutrient_progress_row.dart';
+import 'package:flutter/services.dart'; // Para Clipboard
+import 'package:intl/intl.dart'; // Para formatear la fecha
 
 class NutritionReportSheet extends StatelessWidget {
   final NutritionReport report;
@@ -67,6 +69,138 @@ class NutritionReportSheet extends StatelessWidget {
     'valine',
   ];
 
+  Future<void> _exportReport(BuildContext context) async {
+    final now = DateTime.now();
+    final dateStr = DateFormat('dd/MM/yyyy', 'es').format(now);
+
+    final buffer = StringBuffer();
+    buffer.writeln('📊 Reporte Nutricional - $dateStr\n');
+
+    // Macronutrientes principales
+    buffer.writeln('═══ MACRONUTRIENTES ═══');
+    _addNutrientLine(
+      buffer,
+      'calories',
+      'Calorías',
+      'kcal',
+      totalCaloriesGoal,
+      'Meta',
+    );
+    _addNutrientLine(
+      buffer,
+      'proteins',
+      'Proteínas',
+      'g',
+      proteinGoalGrams,
+      'Meta',
+    );
+    _addNutrientLine(
+      buffer,
+      'totalFats',
+      'Grasas Totales',
+      'g',
+      fatGoalGrams,
+      'Meta',
+    );
+    _addNutrientLine(
+      buffer,
+      'carbohydrates',
+      'Carbohidratos',
+      'g',
+      carbsGoalGrams,
+      'Meta',
+    );
+    buffer.writeln();
+
+    // Resto de nutrientes
+    buffer.writeln('═══ NUTRIENTES ═══');
+    for (final nutrientKey in nutrientOrder) {
+      // Saltar los macros principales que ya agregamos
+      if ([
+        'calories',
+        'proteins',
+        'totalFats',
+        'carbohydrates',
+      ].contains(nutrientKey)) {
+        continue;
+      }
+
+      final value = _getNutrientValue(nutrientKey);
+      if (value > 0 || ['omega3', 'omega6'].contains(nutrientKey)) {
+        final goalData = nutrientGoals[nutrientKey];
+        if (goalData != null) {
+          const nutrientNameMapping = {
+            'fiber': 'Fibra',
+            'omega3': 'Omega-3',
+            'omega6': 'Omega-6',
+            'calcium': 'Calcio',
+            'iron': 'Hierro',
+            'magnesium': 'Magnesio',
+            'phosphorus': 'Fósforo',
+            'potassium': 'Potasio',
+            'sodium': 'Sodio',
+            'zinc': 'Zinc',
+            'copper': 'Cobre',
+            'manganese': 'Manganeso',
+            'selenium': 'Selenio',
+            'vitaminA': 'Vitamina A',
+            'vitaminC': 'Vitamina C',
+            'vitaminE': 'Vitamina E',
+            'vitaminK': 'Vitamina K',
+            'vitaminB1': 'Vitamina B1 (Tiamina)',
+            'vitaminB2': 'Vitamina B2 (Riboflavina)',
+            'vitaminB3': 'Vitamina B3 (Niacina)',
+            'vitaminB4': 'Vitamina B4 (Colina)',
+            'vitaminB5': 'Vitamina B5 (Ác. Pantoténico)',
+            'vitaminB6': 'Vitamina B6',
+            'vitaminB7': 'Vitamina B7 (Biotina)',
+            'vitaminB9': 'Vitamina B9 (Folato)',
+            'iodine': 'Yodo',
+          };
+
+          final name = nutrientNameMapping[nutrientKey] ?? nutrientKey;
+          _addNutrientLine(
+            buffer,
+            nutrientKey,
+            name,
+            goalData['unit'],
+            goalData['value'],
+            goalData['type'],
+          );
+        }
+      }
+    }
+
+    // Copiar al portapapeles
+    await Clipboard.setData(ClipboardData(text: buffer.toString()));
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Reporte copiado al portapapeles'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  void _addNutrientLine(
+    StringBuffer buffer,
+    String key,
+    String name,
+    String unit,
+    double goal,
+    String type,
+  ) {
+    final value = _getNutrientValue(key);
+    final percentage = goal > 0
+        ? ((value / goal) * 100).toStringAsFixed(0)
+        : '0';
+    buffer.writeln(
+      '$name: ${value.toStringAsFixed(1)} / ${goal.toStringAsFixed(0)} $unit ($type) - $percentage%',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
@@ -110,6 +244,18 @@ class NutritionReportSheet extends StatelessWidget {
                   },
                 ),
               ),
+              // Al final de la Column, después del ListView
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.share),
+                  label: const Text('Exportar Reporte'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 48),
+                  ),
+                  onPressed: () => _exportReport(context),
+                ),
+              ),
             ],
           ),
         );
@@ -120,9 +266,10 @@ class NutritionReportSheet extends StatelessWidget {
   Widget? _buildNutrientRow(String nutrientKey) {
     final value = _getNutrientValue(nutrientKey);
 
-if (value <= 0 && !['omega3', 'omega6', 'vitaminB12', 'vitaminD'].contains(nutrientKey)) {
-  return null;
-}
+    if (value <= 0 &&
+        !['omega3', 'omega6', 'vitaminB12', 'vitaminD'].contains(nutrientKey)) {
+      return null;
+    }
     Map<String, dynamic>? goalData;
 
     if (nutrientKey == 'calories') {
