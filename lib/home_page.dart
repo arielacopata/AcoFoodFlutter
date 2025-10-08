@@ -243,9 +243,9 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       _quickDoseButton(context, '30 mcg'),
                       _quickDoseButton(context, '60 mcg'),
-                      _quickDoseButton(context, '130 mcg'),
                       _quickDoseButton(context, '150 mcg'),
                       _quickDoseButton(context, '225 mcg'),
+                      _quickDoseButton(context, '325 mcg'),
                     ],
                   ),
                   const SizedBox(height: 8),

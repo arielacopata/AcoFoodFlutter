@@ -53,7 +53,7 @@ final List<Food> supplementsList = [
     tryptophan: 0,
     valine: 0,
   ),
-
+  
   Food(
     id: 9002,
     emoji: '☀️',
@@ -106,7 +106,7 @@ final List<Food> supplementsList = [
     tryptophan: 0,
     valine: 0,
   ),
-
+  
   Food(
     id: 9004,
     emoji: '🧂',
