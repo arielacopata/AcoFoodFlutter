@@ -63,10 +63,13 @@ class _HomePageState extends State<HomePage> {
   bool _b12Completed = false;
   bool _linoCompleted = false;
   bool _legumbresCompleted = false;
+  bool _yodoCompleted = false;
 
   bool _b12Enabled = true;
   bool _linoEnabled = true;
   bool _legumbresEnabled = true;
+  bool _yodoEnabled = true;
+
   String _sortOrder = 'alfabetico';
   Map<int, int> _foodUsageCounts = {};
   DateTime _selectedDate = DateTime.now();
@@ -115,17 +118,21 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => _buildSupplementModal(supplement),
     );
 
-    //print('DEBUG: result = $result'); // 👈 AGREGAR
+    print('🧂 DEBUG: result completo = $result');
 
     if (result != null && result['dose'] != null) {
+      print('🧂 DEBUG resultado: $result');
+
       final entry = FoodEntry(
         food: supplement,
-        grams: 0,
+        grams: result['grams'] ?? 0,
         isSupplement: true,
         supplementDose: result['dose'],
       );
 
-      //print(        'DEBUG: Guardando entry: ${entry.food.name}, dosis: ${entry.supplementDose}, isSupplement: ${entry.isSupplement}',      ); // 👈 AGREGAR
+      print(
+        '🧂 DEBUG entry creado: grams=${entry.grams}, food.iodine=${supplement.iodine}',
+      ); // ← Verificar
 
       await DatabaseService.instance.createEntry(entry);
 
@@ -177,7 +184,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Si es B12, mostrar botones rápidos
+                // B12 - Solo botones predefinidos
                 if (supplement.id == 9001) ...[
                   const Text(
                     'Dosis común:',
@@ -190,14 +197,18 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       _quickDoseButton(context, '500 mcg'),
                       _quickDoseButton(context, '1000 mcg'),
-                      _quickDoseButton(context, '3500 mcg'),
+                      _quickDoseButton(context, '2500 mcg'),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '💡 1 pastilla = 1000-2500 mcg normalmente',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
 
-                if (supplement.id == 9004) ...[
+                // Vitamina D - Botones predefinidos
+                if (supplement.id == 9002) ...[
                   const Text(
                     'Dosis común:',
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -207,9 +218,34 @@ class _HomePageState extends State<HomePage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      _quickDoseButton(context, '1000 UI'),
+                      _quickDoseButton(context, '2000 UI'),
+                      _quickDoseButton(context, '4000 UI'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '☀️ 1000 UI = 25 mcg',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+
+                // Yodo - Botones predefinidos
+                if (supplement.id == 9004) ...[
+                  const Text(
+                    '🧂 30 mcg ≈ 1g sal | ⚠️ Límite: 1100 mcg/día',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _quickDoseButton(context, '30 mcg'),
+                      _quickDoseButton(context, '60 mcg'),
+                      _quickDoseButton(context, '130 mcg'),
                       _quickDoseButton(context, '150 mcg'),
                       _quickDoseButton(context, '225 mcg'),
-                      _quickDoseButton(context, '325 mcg'),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -217,38 +253,7 @@ class _HomePageState extends State<HomePage> {
                     '⚠️ Límite seguro: 1100 mcg/día',
                     style: TextStyle(fontSize: 12, color: Colors.orange),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
                 ],
-
-                // Input libre
-                const Text(
-                  'Dosis personalizada:',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: doseController,
-                        decoration: const InputDecoration(
-                          hintText: 'Ej: 2 cápsulas, 2000 UI',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (doseController.text.isNotEmpty) {
-                          Navigator.pop(context, {'dose': doseController.text});
-                        }
-                      },
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -258,8 +263,34 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _quickDoseButton(BuildContext context, String dose) {
+    double grams;
+
+    if (dose.contains('UI')) {
+      // Vitamina D: 1000 UI = 1g
+      final uiMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+      final ui = uiMatch != null ? double.parse(uiMatch.group(1)!) : 0;
+      grams = ui / 1000.0; // 1000 UI = 1g
+    } else if (dose.contains('mcg')) {
+      // Extraer el número
+      final mcgMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+      final mcg = mcgMatch != null ? double.parse(mcgMatch.group(1)!) : 0;
+
+      // Determinar la base según el valor (para diferenciar B12 de Yodo)
+      if (mcg >= 500) {
+        // B12 (500-3500 mcg): base 1000 mcg = 1g
+        grams = mcg / 1000.0;
+      } else {
+        // Yodo (150-325 mcg): base 150 mcg = 1g
+        grams = mcg / 150.0;
+      }
+    } else {
+      grams = 0;
+    }
+
+    print('🔘 DEBUG botón: dose=$dose → grams=$grams');
+
     return ElevatedButton(
-      onPressed: () => Navigator.pop(context, {'dose': dose}),
+      onPressed: () => Navigator.pop(context, {'dose': dose, 'grams': grams}),
       child: Text(dose),
     );
   }
@@ -531,11 +562,13 @@ class _HomePageState extends State<HomePage> {
       _linoCompleted = prefs.getBool('lino_completed_$todayKey') ?? false;
       _legumbresCompleted =
           prefs.getBool('legumbres_completed_$todayKey') ?? false;
+      _yodoCompleted = prefs.getBool('yodo_completed_$todayKey') ?? false;
 
       // Estados habilitados (permanentes)
       _b12Enabled = prefs.getBool('b12_enabled') ?? true;
       _linoEnabled = prefs.getBool('lino_enabled') ?? true;
       _legumbresEnabled = prefs.getBool('legumbres_enabled') ?? true;
+      _yodoEnabled = prefs.getBool('yodo_enabled') ?? true;
     });
   }
 
@@ -555,6 +588,15 @@ class _HomePageState extends State<HomePage> {
         final todayKey = _getTodayKey();
         await prefs.setBool('b12_completed_$todayKey', true);
       }
+    } else if (key == 'yodo') {
+      final yodoSupplement = supplementsList.firstWhere((s) => s.id == 9004);
+      final wasRegistered = await _openSupplementSheet(yodoSupplement);
+      if (wasRegistered == true) {
+        setState(() => _yodoCompleted = true);
+        final prefs = await SharedPreferences.getInstance();
+        final todayKey = _getTodayKey();
+        await prefs.setBool('yodo_completed_$todayKey', true);
+      }
     } else if (key == 'lino') {
       setState(() => _linoCompleted = true);
       final prefs = await SharedPreferences.getInstance();
@@ -565,6 +607,11 @@ class _HomePageState extends State<HomePage> {
       final prefs = await SharedPreferences.getInstance();
       final todayKey = _getTodayKey();
       await prefs.setBool('legumbres_completed_$todayKey', true);
+    } else if (key == 'yodo') {
+      setState(() => _yodoCompleted = true);
+      final prefs = await SharedPreferences.getInstance();
+      final todayKey = _getTodayKey();
+      await prefs.setBool('yodo_completed_$todayKey', true);
     }
   }
 
@@ -575,6 +622,9 @@ class _HomePageState extends State<HomePage> {
     if (!_b12Completed && _b12Enabled) {
       currentReminder = '💊 Recordatorio: Tomar B12';
       reminderKey = 'b12';
+    } else if (!_yodoCompleted && _yodoEnabled) {
+      currentReminder = '🧪 Recordatorio: Tomar Yodo';
+      reminderKey = 'yodo';
     } else if (!_linoCompleted && _linoEnabled) {
       currentReminder = '🌾 Recordatorio: Semillas de lino';
       reminderKey = 'lino';
@@ -620,145 +670,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   // AGREGAR esta función en home_page.dart, cerca de las otras funciones de modales
-
-  /// Modal para registrar Yodo
-  Future<void> _showIodineModal() async {
-    final TextEditingController doseController = TextEditingController();
-
-    final result = await showModalBottomSheet<Map<String, dynamic>?>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '🧂 Yodo (suplemento)',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Dosis del suplemento',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-
-            // Botones de dosis predefinidas
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '150 mcg'}),
-                    child: const Text('150 mcg'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '225 mcg'}),
-                    child: const Text('225 mcg'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '325 mcg'}),
-                    child: const Text('325 mcg'),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-
-            // Input personalizado
-            const Text(
-              'O ingresa una dosis personalizada:',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: doseController,
-                    keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(
-                      hintText: 'Ej: 400 mcg, 2000 UI',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    if (doseController.text.isNotEmpty) {
-                      Navigator.pop(context, {'dose': doseController.text});
-                    }
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-            const Text(
-              '⚠️ Límite seguro: 1100 mcg/día',
-              style: TextStyle(fontSize: 11, color: Colors.orange),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-
-    // Si se seleccionó una dosis, registrarla
-    if (result != null && result['dose'] != null) {
-      final iodineFood = supplementsList.firstWhere((s) => s.id == 9004);
-      final entry = FoodEntry(
-        food: iodineFood,
-        grams: 0, // Los suplementos no tienen gramos
-        isSupplement: true,
-        supplementDose: result['dose'],
-      );
-
-      await DatabaseService.instance.createEntry(entry);
-      _loadHistory();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Yodo registrado: ${result['dose']}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
 
   // Exportar como texto
   Future<void> _exportAsText() async {
@@ -1242,6 +1153,7 @@ class _HomePageState extends State<HomePage> {
           // Volver a abrir la lista de alimentos para agregar otro
           setState(() {
             _isBuildingMultiple = true;
+            _tareWeight = _weight;
           });
           // No hacer nada más, el usuario volverá a seleccionar otro alimento
         } else if (action == 'finish') {

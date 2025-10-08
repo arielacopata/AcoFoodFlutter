@@ -48,6 +48,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
   bool _b12Checked = false;
   bool _linoChecked = false;
   bool _legumbresChecked = false;
+  bool _yodoChecked = true;
   String _sortOrder = 'alfabetico'; // 'alfabetico' o 'mas_usados'
   bool _googleFitEnabled = false;
 
@@ -124,10 +125,10 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     final prefs = await SharedPreferences.getInstance();
 
     setState(() {
-      _b12Checked =
-          prefs.getBool('b12_enabled') ?? true; // Por defecto activado
+      _b12Checked = prefs.getBool('b12_enabled') ?? true;
       _linoChecked = prefs.getBool('lino_enabled') ?? true;
       _legumbresChecked = prefs.getBool('legumbres_enabled') ?? true;
+      _yodoChecked = prefs.getBool('yodo_enabled') ?? true;
     });
   }
 
@@ -137,6 +138,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     await prefs.setBool('b12_enabled', _b12Checked);
     await prefs.setBool('lino_enabled', _linoChecked);
     await prefs.setBool('legumbres_enabled', _legumbresChecked);
+    await prefs.setBool('yodo_enabled', _yodoChecked);
 
     // Notificar al home_page que se actualizaron los recordatorios
     if (widget.onRemindersChanged != null) {
@@ -956,6 +958,14 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
                 value: _b12Checked,
                 onChanged: (val) {
                   setState(() => _b12Checked = val ?? false);
+                  _saveReminders();
+                },
+              ),
+              CheckboxListTile(
+                title: const Text('Tomar Yodo'),
+                value: _yodoChecked,
+                onChanged: (value) {
+                  setState(() => _yodoChecked = value ?? true);
                   _saveReminders();
                 },
               ),

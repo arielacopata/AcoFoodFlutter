@@ -42,7 +42,7 @@ final Map<String, Map<String, dynamic>> nutrientGoals = {
   'vitaminB7': {'value': 30.0, 'unit': 'mcg', 'type': 'AI'},
   'vitaminB9': {'value': 400.0, 'unit': 'mcg', 'type': 'RDA'},
   'vitaminB12': {'value': 2.4, 'unit': 'mcg', 'type': 'RDA'},
-  'vitaminD': {'value': 600.0, 'unit': 'UI', 'type': 'RDA'},
+  'vitaminD': {'value': 15.0, 'unit': 'mcg', 'type': 'RDA'},
   'iodine': {'value': 150.0, 'unit': 'mcg', 'type': 'RDA'},
   "histidine": {"value": 10.0, "unit": "mg/kg/day", "type": "RDA"},
   "isoleucine": {"value": 20.0, "unit": "mg/kg/day", "type": "RDA"},
