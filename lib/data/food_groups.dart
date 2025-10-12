@@ -31,12 +31,14 @@ List<FoodGroupDisplay> getFoodGroups(
     FoodGroupDisplay(
       groupName: "Garbanzos",
       emoji: "🥣",
-      items: allFoods.where((f) => [10, 11, 43].contains(f.id)).toList(),
+      items: allFoods.where((f) => [10, 11, 43, 127].contains(f.id)).toList(),
     ),
     FoodGroupDisplay(
       groupName: "Lentejas",
       emoji: "🥣",
-      items: allFoods.where((f) => [49, 50, 51].contains(f.id)).toList(),
+      items: allFoods
+          .where((f) => [49, 50, 51, 128, 129, 130].contains(f.id))
+          .toList(),
     ),
     FoodGroupDisplay(
       groupName: "Manzana",
@@ -56,7 +58,9 @@ List<FoodGroupDisplay> getFoodGroups(
     FoodGroupDisplay(
       groupName: "Porotos",
       emoji: "🥣",
-      items: allFoods.where((f) => [44, 45, 46, 47].contains(f.id)).toList(),
+      items: allFoods
+          .where((f) => [44, 45, 46, 47, 131, 132, 133, 134].contains(f.id))
+          .toList(),
     ),
     FoodGroupDisplay(
       groupName: "Remolacha",
@@ -141,7 +145,21 @@ List<FoodGroupDisplay> getFoodGroups(
       groupName: "Especias",
       emoji: "🌿",
       items: allFoods
-          .where((f) => [92, 53, 55, 74, 56, 57, 113, 114, 115].contains(f.id))
+          .where(
+            (f) => [
+              92,
+              53,
+              55,
+              74,
+              56,
+              57,
+              113,
+              114,
+              115,
+              135,
+              136,
+            ].contains(f.id),
+          )
           .toList(),
     ),
     // En data/food_groups.dart, después de los otros grupos:
