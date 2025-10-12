@@ -4,8 +4,53 @@ import 'package:flutter/material.dart';
 import '../models/nutrition_report.dart';
 import '../data/nutrient_goals.dart';
 import 'nutrient_progress_row.dart';
-import 'package:flutter/services.dart'; // Para Clipboard
-import 'package:intl/intl.dart'; // Para formatear la fecha
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+
+const Map<String, String> nutrientNameMapping = {
+  'calories': "Calorías",
+  'proteins': "Proteínas",
+  'carbohydrates': "Carbohidratos",
+  'totalFats': "Grasas Totales",
+  'fiber': 'Fibra',
+  'omega3': 'Omega-3',
+  'omega6': 'Omega-6',
+  'calcium': 'Calcio',
+  'iron': 'Hierro',
+  'magnesium': 'Magnesio',
+  'phosphorus': 'Fósforo',
+  'potassium': 'Potasio',
+  'sodium': 'Sodio',
+  'zinc': 'Zinc',
+  'copper': 'Cobre',
+  'manganese': 'Manganeso',
+  'selenium': 'Selenio',
+  'vitaminA': 'Vitamina A',
+  'vitaminC': 'Vitamina C',
+  'vitaminE': 'Vitamina E',
+  'vitaminK': 'Vitamina K',
+  'vitaminB1': 'Vitamina B1 (Tiamina)',
+  'vitaminB2': 'Vitamina B2 (Riboflavina)',
+  'vitaminB3': 'Vitamina B3 (Niacina)',
+  'vitaminB4': 'Vitamina B4 (Colina)',
+  'vitaminB5': 'Vitamina B5 (Ác. Pantoténico)',
+  'vitaminB6': 'Vitamina B6',
+  'vitaminB7': 'Vitamina B7 (Biotina)',
+  'vitaminB9': 'Vitamina B9 (Folato)',
+  'iodine': 'Yodo',
+  'histidine': "Histidina",
+  'isoleucine': "Isoleucina",
+  'leucine': "Leucina",
+  'lysine': "Lisina",
+  'methionine': "Metionina",
+  'phenylalanine': "Fenilalanina",
+  'threonine': "Treonina",
+  'tryptophan': "Triptófano",
+  'valine': "Valina",
+};
 
 class NutritionReportSheet extends StatefulWidget {
   final NutritionReport report;
@@ -26,8 +71,9 @@ class NutritionReportSheet extends StatefulWidget {
     required this.fatGoalGrams,
     required this.selectedDate,
     required this.onDateChanged,
-    this.userWeight = 70.0, // Default 70kg
+    this.userWeight = 70.0,
   });
+
   @override
   State<NutritionReportSheet> createState() => _NutritionReportSheetState();
 }
@@ -77,15 +123,46 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     'valine',
   ];
 
-  Future<void> _exportReport(BuildContext context) async {
-    final now = DateTime.now();
-    final dateStr = DateFormat('dd/MM/yyyy', 'es').format(now);
+  // Mostrar menú para elegir tipo de exportación
+  void _showExportMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.content_copy),
+              title: const Text('Copiar texto al portapapeles'),
+              subtitle: const Text('Para compartir rápido'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportTextReport(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf),
+              title: const Text('Generar PDF visual'),
+              subtitle: const Text('Reporte completo con gráficos'),
+              onTap: () {
+                Navigator.pop(context);
+                _exportPdfReport(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
+  // Exportar como texto (función original mejorada)
+  Future<void> _exportTextReport(BuildContext context) async {
+    final dateStr = DateFormat('dd/MM/yyyy', 'es').format(widget.selectedDate);
     final buffer = StringBuffer();
-    buffer.writeln('📊 Reporte Nutricional - $dateStr\n');
 
-    // Macronutrientes principales
+    buffer.writeln('📊 Reporte Nutricional - $dateStr\n');
     buffer.writeln('═══ MACRONUTRIENTES ═══');
+
     _addNutrientLine(
       buffer,
       'calories',
@@ -120,10 +197,8 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     );
     buffer.writeln();
 
-    // Resto de nutrientes
     buffer.writeln('═══ NUTRIENTES ═══');
     for (final nutrientKey in nutrientOrder) {
-      // Saltar los macros principales que ya agregamos
       if ([
         'calories',
         'proteins',
@@ -137,35 +212,6 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
       if (value > 0 || ['omega3', 'omega6'].contains(nutrientKey)) {
         final goalData = nutrientGoals[nutrientKey];
         if (goalData != null) {
-          const nutrientNameMapping = {
-            'fiber': 'Fibra',
-            'omega3': 'Omega-3',
-            'omega6': 'Omega-6',
-            'calcium': 'Calcio',
-            'iron': 'Hierro',
-            'magnesium': 'Magnesio',
-            'phosphorus': 'Fósforo',
-            'potassium': 'Potasio',
-            'sodium': 'Sodio',
-            'zinc': 'Zinc',
-            'copper': 'Cobre',
-            'manganese': 'Manganeso',
-            'selenium': 'Selenio',
-            'vitaminA': 'Vitamina A',
-            'vitaminC': 'Vitamina C',
-            'vitaminE': 'Vitamina E',
-            'vitaminK': 'Vitamina K',
-            'vitaminB1': 'Vitamina B1 (Tiamina)',
-            'vitaminB2': 'Vitamina B2 (Riboflavina)',
-            'vitaminB3': 'Vitamina B3 (Niacina)',
-            'vitaminB4': 'Vitamina B4 (Colina)',
-            'vitaminB5': 'Vitamina B5 (Ác. Pantoténico)',
-            'vitaminB6': 'Vitamina B6',
-            'vitaminB7': 'Vitamina B7 (Biotina)',
-            'vitaminB9': 'Vitamina B9 (Folato)',
-            'iodine': 'Yodo',
-          };
-
           final name = nutrientNameMapping[nutrientKey] ?? nutrientKey;
           _addNutrientLine(
             buffer,
@@ -179,7 +225,6 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
       }
     }
 
-    // Copiar al portapapeles
     await Clipboard.setData(ClipboardData(text: buffer.toString()));
 
     if (context.mounted) {
@@ -201,12 +246,340 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     String type,
   ) {
     final value = _getNutrientValue(key);
-    final percentage = goal > 0
-        ? ((value / goal) * 100).toStringAsFixed(0)
+
+    // Convertir aminoácidos de mg/kg/day a gramos totales
+    double adjustedGoal = goal;
+    String adjustedUnit = unit;
+
+    if (unit == 'mg/kg/day') {
+      final totalMg = goal * widget.userWeight;
+      adjustedGoal = totalMg / 1000; // convertir mg a g
+      adjustedUnit = 'g';
+    }
+
+    final percentage = adjustedGoal > 0
+        ? ((value / adjustedGoal) * 100).toStringAsFixed(0)
         : '0';
+
+    // Formatear valores según el tamaño
+    String formattedValue = value < 10
+        ? value.toStringAsFixed(2)
+        : value.toStringAsFixed(0);
+    String formattedGoal = adjustedGoal < 10
+        ? adjustedGoal.toStringAsFixed(2)
+        : adjustedGoal.toStringAsFixed(0);
+
     buffer.writeln(
-      '$name: ${value.toStringAsFixed(1)} / ${goal.toStringAsFixed(0)} $unit ($type) - $percentage%',
+      '$name: $formattedValue / $formattedGoal $adjustedUnit ($type) - $percentage%',
     );
+  }
+
+  // Nueva función: Exportar como PDF visual
+  Future<void> _exportPdfReport(BuildContext context) async {
+    final pdf = pw.Document();
+    final dateStr = DateFormat('dd/MM/yyyy', 'es').format(widget.selectedDate);
+
+    // Calcular porcentajes de macros
+    final proteinPct = widget.proteinGoalGrams > 0
+        ? ((widget.report.proteins / widget.proteinGoalGrams) * 100).round()
+        : 0;
+    final carbsPct = widget.carbsGoalGrams > 0
+        ? ((widget.report.carbohydrates / widget.carbsGoalGrams) * 100).round()
+        : 0;
+    final fatsPct = widget.fatGoalGrams > 0
+        ? ((widget.report.totalFats / widget.fatGoalGrams) * 100).round()
+        : 0;
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return [
+            // Header
+            pw.Container(
+              padding: const pw.EdgeInsets.only(bottom: 20),
+              decoration: const pw.BoxDecoration(
+                border: pw.Border(
+                  bottom: pw.BorderSide(width: 2, color: PdfColors.green700),
+                ),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Reporte Nutricional',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.green900,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        dateStr,
+                        style: const pw.TextStyle(
+                          fontSize: 14,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Text('🥑', style: const pw.TextStyle(fontSize: 40)),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Resumen de calorías
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.grey200,
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    'Calorías',
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.Text(
+                    '${widget.report.calories.toStringAsFixed(0)} / ${widget.totalCaloriesGoal.toStringAsFixed(0)} kcal',
+                    style: const pw.TextStyle(
+                      fontSize: 16,
+                      color: PdfColors.green800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Macronutrientes
+            pw.Text(
+              'MACRONUTRIENTES',
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green900,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+
+            _buildPdfNutrientRow(
+              'Proteínas',
+              widget.report.proteins,
+              widget.proteinGoalGrams,
+              'g',
+              proteinPct,
+            ),
+            _buildPdfNutrientRow(
+              'Carbohidratos',
+              widget.report.carbohydrates,
+              widget.carbsGoalGrams,
+              'g',
+              carbsPct,
+            ),
+            _buildPdfNutrientRow(
+              'Grasas',
+              widget.report.totalFats,
+              widget.fatGoalGrams,
+              'g',
+              fatsPct,
+            ),
+
+            pw.SizedBox(height: 20),
+
+            // Otros nutrientes importantes
+            pw.Text(
+              'NUTRIENTES PRINCIPALES',
+              style: pw.TextStyle(
+                fontSize: 18,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.green900,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+
+            // Lista de nutrientes con valores > 0
+            ...nutrientOrder
+                .skip(4) // Saltar los 4 primeros (macros)
+                .map((key) {
+                  final value = _getNutrientValue(key);
+                  if (value <= 0 &&
+                      ![
+                        'omega3',
+                        'omega6',
+                        'vitaminB12',
+                        'vitaminD',
+                      ].contains(key)) {
+                    return pw.SizedBox.shrink();
+                  }
+
+                  Map<String, dynamic>? goalData = nutrientGoals[key];
+
+                  if (goalData != null && goalData['unit'] == 'mg/kg/day') {
+                    final mgPerKg = goalData['value'] as double;
+                    final totalMg = mgPerKg * widget.userWeight;
+                    final totalGrams = totalMg / 1000;
+                    goalData = {
+                      'value': totalGrams,
+                      'unit': 'g',
+                      'type': goalData['type'],
+                    };
+                  }
+
+                  if (goalData == null) return pw.SizedBox.shrink();
+
+                  const nutrientNames = {
+                    'fiber': 'Fibra',
+                    'omega3': 'Omega-3',
+                    'omega6': 'Omega-6',
+                    'vitaminA': 'Vitamina A',
+                    'vitaminC': 'Vitamina C',
+                    'vitaminB12': 'Vitamina B12',
+                    'vitaminD': 'Vitamina D',
+                    'calcium': 'Calcio',
+                    'iron': 'Hierro',
+                    'magnesium': 'Magnesio',
+                    'zinc': 'Zinc',
+                    'iodine': 'Yodo',
+                  };
+
+                  final name = nutrientNames[key];
+                  if (name == null) return pw.SizedBox.shrink();
+
+                  final goal = goalData['value'] as double;
+                  final pct = goal > 0 ? ((value / goal) * 100).round() : 0;
+
+                  return _buildPdfNutrientRow(
+                    name,
+                    value,
+                    goal,
+                    goalData['unit'],
+                    pct,
+                  );
+                })
+                .toList(),
+
+            pw.SizedBox(height: 20),
+
+            // Footer
+            pw.Divider(color: PdfColors.green700),
+            pw.SizedBox(height: 10),
+            pw.Center(
+              child: pw.Text(
+                'Generado por AcoFood 🌱',
+                style: const pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey600,
+                ),
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
+    // Compartir el PDF
+    await Printing.sharePdf(
+      bytes: await pdf.save(),
+      filename: 'reporte_nutricional_$dateStr.pdf',
+    );
+  }
+
+  // Helper para construir filas de nutrientes en PDF
+  pw.Widget _buildPdfNutrientRow(
+    String name,
+    double value,
+    double goal,
+    String unit,
+    int percentage,
+  ) {
+    final progress = (goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0.0);
+
+    // Determinar color
+    PdfColor barColor;
+    if (percentage >= 90) {
+      barColor = PdfColors.green;
+    } else if (percentage >= 50) {
+      barColor = PdfColors.orange;
+    } else {
+      barColor = PdfColors.red;
+    }
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 12),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text(
+                name,
+                style: pw.TextStyle(
+                  fontSize: 12,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.Text(
+                '${_formatValue(value)} / ${_formatValue(goal)} $unit ($percentage%)',
+                style: const pw.TextStyle(
+                  fontSize: 11,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 4),
+          // Barra de progreso usando Row con Expanded
+          pw.Container(
+            height: 8,
+            decoration: pw.BoxDecoration(
+              color: PdfColors.grey300,
+              borderRadius: pw.BorderRadius.circular(4),
+            ),
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  flex: (progress * 100).round(),
+                  child: pw.Container(
+                    decoration: pw.BoxDecoration(
+                      color: barColor,
+                      borderRadius: pw.BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                if (progress < 1.0)
+                  pw.Expanded(
+                    flex: ((1 - progress) * 100).round(),
+                    child: pw.Container(),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatValue(double val) {
+    if (val < 1.0) {
+      return val.toStringAsFixed(2);
+    } else {
+      return val.toStringAsFixed(1);
+    }
   }
 
   @override
@@ -222,13 +595,11 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
             if (details.primaryVelocity!.abs() < 300) return;
 
             if (details.primaryVelocity! > 0) {
-              // Swipe derecha → día anterior (siempre permitido)
               final newDate = widget.selectedDate.subtract(
                 const Duration(days: 1),
               );
               widget.onDateChanged(newDate);
             } else if (details.primaryVelocity! < 0) {
-              // Swipe izquierda → día siguiente (solo si no es futuro)
               final today = DateTime.now();
               final todayStart = DateTime(today.year, today.month, today.day);
               final selectedStart = DateTime(
@@ -237,10 +608,9 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
                 widget.selectedDate.day,
               );
 
-              // Si ya estás viendo hoy, no permitir ir al futuro
               if (selectedStart.isAtSameMomentAs(todayStart) ||
                   selectedStart.isAfter(todayStart)) {
-                return; // Bloquear
+                return;
               }
 
               final newDate = widget.selectedDate.add(const Duration(days: 1));
@@ -285,7 +655,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
                     },
                   ),
                 ),
-                // Al final de la Column, después del ListView
+                // Botón de exportar con menú
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: ElevatedButton.icon(
@@ -294,7 +664,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 48),
                     ),
-                    onPressed: () => _exportReport(context),
+                    onPressed: () => _showExportMenu(context),
                   ),
                 ),
               ],
@@ -312,6 +682,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
         !['omega3', 'omega6', 'vitaminB12', 'vitaminD'].contains(nutrientKey)) {
       return null;
     }
+
     Map<String, dynamic>? goalData;
 
     if (nutrientKey == 'calories') {
@@ -333,11 +704,10 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     } else {
       goalData = nutrientGoals[nutrientKey];
 
-      // Convertir aminoácidos de mg/kg/day a gramos totales
       if (goalData != null && goalData['unit'] == 'mg/kg/day') {
         final mgPerKg = goalData['value'] as double;
         final totalMg = mgPerKg * widget.userWeight;
-        final totalGrams = totalMg / 1000; // convertir mg a g
+        final totalGrams = totalMg / 1000;
 
         goalData = {'value': totalGrams, 'unit': 'g', 'type': goalData['type']};
       }
@@ -345,52 +715,6 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
 
     if (goalData == null) return null;
 
-    const nutrientNameMapping = {
-      'calories': "Calorías",
-      'proteins': "Proteínas",
-      'carbohydrates': "Carbohidratos",
-      'totalFats': "Grasas Totales",
-      'fiber': "Fibra",
-      'saturatedFats': "Grasas Saturadas",
-      'omega3': "Omega-3",
-      'omega6': "Omega-6",
-      'calcium': "Calcio",
-      'iron': "Hierro",
-      'magnesium': "Magnesio",
-      'phosphorus': "Fósforo",
-      'potassium': "Potasio",
-      'sodium': "Sodio",
-      'zinc': "Zinc",
-      'copper': "Cobre",
-      'manganese': "Manganeso",
-      'selenium': "Selenio",
-      'vitaminA': "Vitamina A",
-      'vitaminC': "Vitamina C",
-      'vitaminE': "Vitamina E",
-      'vitaminK': "Vitamina K",
-      'vitaminB1': "Vitamina B1 (Tiamina)",
-      'vitaminB2': "Vitamina B2 (Riboflavina)",
-      'vitaminB3': "Vitamina B3 (Niacina)",
-      'vitaminB4': "Vitamina B4 (Colina)",
-      'vitaminB5': "Vitamina B5 (Ác. Pantoténico)",
-      'vitaminB6': "Vitamina B6",
-      'vitaminB7': "Vitamina B7 (Biotina)",
-      'vitaminB9': "Vitamina B9 (Folato)",
-      'vitaminB12': "Vitamina B12",
-      'vitaminD': "Vitamina D",
-      'iodine': "Yodo",
-      'histidine': "Histidina",
-      'isoleucine': "Isoleucina",
-      'leucine': "Leucina",
-      'lysine': "Lisina",
-      'methionine': "Metionina",
-      'phenylalanine': "Fenilalanina",
-      'threonine': "Treonina",
-      'tryptophan': "Triptófano",
-      'valine': "Valina",
-    };
-
-    // Agregar divisor antes del primer aminoácido
     if (nutrientKey == 'histidine') {
       return Column(
         children: [
@@ -415,6 +739,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
         ],
       );
     }
+
     return NutrientProgressRow(
       name: nutrientNameMapping[nutrientKey] ?? "Desconocido",
       value: value,
@@ -526,6 +851,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
 
     final isToday = selectedStart.isAtSameMomentAs(todayStart);
     final isFuture = selectedStart.isAfter(todayStart);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -573,7 +899,6 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
               color: isFuture ? Colors.grey.shade300 : null,
             ),
             onPressed: () {
-              // Verificar si ya estamos en hoy
               final today = DateTime.now();
               final todayStart = DateTime(today.year, today.month, today.day);
               final selectedStart = DateTime(
@@ -582,10 +907,9 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
                 widget.selectedDate.day,
               );
 
-              // Si ya estás viendo hoy o en el futuro, bloquear
               if (selectedStart.isAtSameMomentAs(todayStart) ||
                   selectedStart.isAfter(todayStart)) {
-                return; // No permitir avanzar
+                return;
               }
 
               final newDate = widget.selectedDate.add(const Duration(days: 1));
