@@ -40,6 +40,8 @@ const Map<String, String> nutrientNameMapping = {
   'vitaminB6': 'Vitamina B6',
   'vitaminB7': 'Vitamina B7 (Biotina)',
   'vitaminB9': 'Vitamina B9 (Folato)',
+  'vitaminB12': 'Vitamina B12',
+  'vitaminD': 'Vitamina D',
   'iodine': 'Yodo',
   'histidine': "Histidina",
   'isoleucine': "Isoleucina",
