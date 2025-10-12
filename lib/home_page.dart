@@ -1189,57 +1189,72 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _saveAsRecipe() async {
-    final nameController = TextEditingController();
+Future<void> _saveAsRecipe() async {
+  // Colapsar historial/macros primero (igual que al buscar)
+  setState(() {
+    _showBottomContent = false;
+  });
+  
+  // Pequeña pausa para que se complete la animación
+  await Future.delayed(const Duration(milliseconds: 150));
+  
+  final nameController = TextEditingController();
 
-    final recipeName = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Nombre de la receta'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(
-            hintText: 'Ej: Desayuno habitual',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
+  final recipeName = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Nombre de la receta'),
+      content: TextField(
+        controller: nameController,
+        decoration: const InputDecoration(
+          hintText: 'Ej: Desayuno habitual',
+          border: OutlineInputBorder(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                Navigator.pop(context, nameController.text);
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
+        autofocus: true,
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            if (nameController.text.isNotEmpty) {
+              Navigator.pop(context, nameController.text);
+            }
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    ),
+  );
+
+  // Restaurar historial/macros después de cerrar el diálogo
+  if (mounted) {
+    setState(() {
+      _showBottomContent = true;
+    });
+  }
+
+  if (recipeName != null && recipeName.isNotEmpty) {
+    final recipe = Recipe(
+      name: recipeName,
+      emoji: '🍽️',
+      createdAt: DateTime.now(),
     );
 
-    if (recipeName != null && recipeName.isNotEmpty) {
-      final recipe = Recipe(
-        name: recipeName,
-        emoji: '🍽️',
-        createdAt: DateTime.now(),
+    await DatabaseService.instance.saveRecipe(recipe, _pendingIngredients);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Receta "$recipeName" guardada'),
+          duration: const Duration(seconds: 2),
+        ),
       );
-
-      await DatabaseService.instance.saveRecipe(recipe, _pendingIngredients);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Receta "$recipeName" guardada'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
     }
   }
+}
 
   // ✅ DIÁLOGO CON SCROLL (mejora de v3)
 Future<void> _showVariantDialog(FoodGroupDisplay group) async {
