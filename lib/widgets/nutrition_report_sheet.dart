@@ -443,22 +443,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
 
                   if (goalData == null) return pw.SizedBox.shrink();
 
-                  const nutrientNames = {
-                    'fiber': 'Fibra',
-                    'omega3': 'Omega-3',
-                    'omega6': 'Omega-6',
-                    'vitaminA': 'Vitamina A',
-                    'vitaminC': 'Vitamina C',
-                    'vitaminB12': 'Vitamina B12',
-                    'vitaminD': 'Vitamina D',
-                    'calcium': 'Calcio',
-                    'iron': 'Hierro',
-                    'magnesium': 'Magnesio',
-                    'zinc': 'Zinc',
-                    'iodine': 'Yodo',
-                  };
-
-                  final name = nutrientNames[key];
+                  final name = nutrientNameMapping[key];
                   if (name == null) return pw.SizedBox.shrink();
 
                   final goal = goalData['value'] as double;
