@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/dashboard_stats.dart';
 import '../services/database_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:math';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -214,6 +215,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
+    // Verificar si hay datos después de excluir hoy
+    final spots = _getChartSpots();
+    if (spots.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('No hay datos históricos para mostrar'),
+        ),
+      );
+    }
+
     // Determinar título y color según el macro seleccionado
     String chartTitle;
     Color chartColor;
@@ -254,6 +266,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   gridData: const FlGridData(show: true),
                   titlesData: const FlTitlesData(show: false),
                   borderData: FlBorderData(show: true),
+                  minY: _getMinY(), // ⭐ NUEVO - padding 20% abajo
+                  maxY: _getMaxY(), // ⭐ NUEVO - padding 20% arriba
                   lineBarsData: [
                     LineChartBarData(
                       spots: _getChartSpots(),
@@ -274,7 +288,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   List<FlSpot> _getChartSpots() {
-    return _stats!.dailyData.asMap().entries.map((entry) {
+    // Filtrar el día actual (hoy) porque los datos están incompletos
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final filteredData = _stats!.dailyData.where((day) {
+      final dayDate = DateTime(day.date.year, day.date.month, day.date.day);
+      return dayDate.isBefore(today); // Solo días anteriores a hoy
+    }).toList();
+
+    return filteredData.asMap().entries.map((entry) {
       double value;
       switch (_selectedMacro) {
         case 'protein':
@@ -292,6 +315,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       return FlSpot(entry.key.toDouble(), value);
     }).toList();
+  }
+
+  // ⭐ NUEVAS FUNCIONES - Calcular min/max con padding 20/20
+  double _getMinY() {
+    final spots = _getChartSpots(); // Ya viene filtrado sin el día actual
+    if (spots.isEmpty) return 0;
+
+    final values = spots.map((spot) => spot.y).toList();
+
+    final dataMin = values.reduce(min);
+    final dataMax = values.reduce(max);
+    final range = dataMax - dataMin;
+
+    // Si el rango es muy pequeño (datos casi iguales), usar un padding fijo
+    if (range < 10) {
+      return (dataMin - 10).clamp(0, double.infinity);
+    }
+
+    // Padding 20% abajo
+    final minY = dataMin - (range * 0.20);
+
+    // No permitir valores negativos para calorías/macros
+    return minY.clamp(0, double.infinity);
+  }
+
+  double _getMaxY() {
+    final spots = _getChartSpots(); // Ya viene filtrado sin el día actual
+    if (spots.isEmpty) return 100;
+
+    final values = spots.map((spot) => spot.y).toList();
+
+    final dataMin = values.reduce(min);
+    final dataMax = values.reduce(max);
+    final range = dataMax - dataMin;
+
+    // Si el rango es muy pequeño, usar un padding fijo
+    if (range < 10) {
+      return dataMax + 10;
+    }
+
+    // Padding 20% arriba
+    return dataMax + (range * 0.20);
   }
 
   Widget _buildTopFoods() {

@@ -9,6 +9,10 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:excel/excel.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 const Map<String, String> nutrientNameMapping = {
   'calories': "Calorías",
@@ -63,6 +67,11 @@ class NutritionReportSheet extends StatefulWidget {
   final double userWeight;
   final DateTime selectedDate;
   final Function(DateTime newDate) onDateChanged;
+  final Future<List<Map<String, dynamic>>> Function(
+    DateTime start,
+    DateTime end,
+  )?
+  getReportsForRange;
 
   const NutritionReportSheet({
     super.key,
@@ -74,6 +83,7 @@ class NutritionReportSheet extends StatefulWidget {
     required this.selectedDate,
     required this.onDateChanged,
     this.userWeight = 70.0,
+    this.getReportsForRange,
   });
 
   @override
@@ -81,6 +91,8 @@ class NutritionReportSheet extends StatefulWidget {
 }
 
 class _NutritionReportSheetState extends State<NutritionReportSheet> {
+  late BuildContext _scaffoldContext;
+
   static const List<String> nutrientOrder = [
     'calories',
     'proteins',
@@ -125,11 +137,62 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     'valine',
   ];
 
+  // Grupos de nutrientes para las páginas del PDF
+  static const List<String> page1Nutrients = [
+    'calories',
+    'proteins',
+    'totalFats',
+    'carbohydrates',
+    'fiber',
+    'omega3',
+    'omega6',
+    'vitaminA',
+    'vitaminB1',
+    'vitaminB2',
+    'vitaminB3',
+    'vitaminB6',
+    'vitaminB9',
+    'vitaminC',
+  ];
+
+  static const List<String> page2Nutrients = [
+    'vitaminE',
+    'vitaminK',
+    'vitaminB4',
+    'vitaminB5',
+    'vitaminB7',
+    'vitaminB12',
+    'vitaminD',
+    'calcium',
+    'iron',
+    'magnesium',
+    'phosphorus',
+    'potassium',
+    'sodium',
+    'zinc',
+    'copper',
+    'manganese',
+    'selenium',
+    'iodine',
+  ];
+
+  static const List<String> page3Nutrients = [
+    'histidine',
+    'isoleucine',
+    'leucine',
+    'lysine',
+    'methionine',
+    'phenylalanine',
+    'threonine',
+    'tryptophan',
+    'valine',
+  ];
+
   // Mostrar menú para elegir tipo de exportación
   void _showExportMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      builder: (context) => SafeArea(
+      builder: (bottomSheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -138,17 +201,29 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
               title: const Text('Copiar texto al portapapeles'),
               subtitle: const Text('Para compartir rápido'),
               onTap: () {
-                Navigator.pop(context);
-                _exportTextReport(context);
+                Navigator.pop(bottomSheetContext);
+                _exportTextReport(_scaffoldContext);
               },
             ),
             ListTile(
               leading: const Icon(Icons.picture_as_pdf),
               title: const Text('Generar PDF visual'),
-              subtitle: const Text('Reporte completo con gráficos'),
+              subtitle: const Text('Reporte completo con gráficos (3 páginas)'),
               onTap: () {
-                Navigator.pop(context);
-                _exportPdfReport(context);
+                Navigator.pop(bottomSheetContext);
+                _exportPdfReport(_scaffoldContext);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.table_chart),
+              title: const Text('Exportar a Excel'),
+              subtitle: const Text('Múltiples días con tablas dinámicas'),
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                // Usar el context guardado del scaffold principal
+                Future.delayed(const Duration(milliseconds: 300), () {
+                  _showDateRangePicker(_scaffoldContext);
+                });
               },
             ),
           ],
@@ -276,204 +351,89 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     );
   }
 
-  // Nueva función: Exportar como PDF visual
+  // Nueva función: Exportar como PDF visual (3 páginas)
   Future<void> _exportPdfReport(BuildContext context) async {
     final pdf = pw.Document();
     final dateStr = DateFormat('dd/MM/yyyy', 'es').format(widget.selectedDate);
 
-    // Calcular porcentajes de macros
-    final proteinPct = widget.proteinGoalGrams > 0
-        ? ((widget.report.proteins / widget.proteinGoalGrams) * 100).round()
-        : 0;
-    final carbsPct = widget.carbsGoalGrams > 0
-        ? ((widget.report.carbohydrates / widget.carbsGoalGrams) * 100).round()
-        : 0;
-    final fatsPct = widget.fatGoalGrams > 0
-        ? ((widget.report.totalFats / widget.fatGoalGrams) * 100).round()
-        : 0;
-
+    // PÁGINA 1: Macros + Vitaminas A-C
     pdf.addPage(
-      pw.MultiPage(
+      pw.Page(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (pw.Context context) {
-          return [
-            // Header
-            pw.Container(
-              padding: const pw.EdgeInsets.only(bottom: 20),
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  bottom: pw.BorderSide(width: 2, color: PdfColors.green700),
-                ),
-              ),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text(
-                        'Reporte Nutricional',
-                        style: pw.TextStyle(
-                          fontSize: 24,
-                          fontWeight: pw.FontWeight.bold,
-                          color: PdfColors.green900,
-                        ),
-                      ),
-                      pw.SizedBox(height: 4),
-                      pw.Text(
-                        dateStr,
-                        style: const pw.TextStyle(
-                          fontSize: 14,
-                          color: PdfColors.grey700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  pw.Text('🥑', style: const pw.TextStyle(fontSize: 40)),
-                ],
-              ),
-            ),
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPdfHeader(dateStr, '1/3'),
+              pw.SizedBox(height: 20),
+              _buildCaloriesSummary(),
+              pw.SizedBox(height: 20),
+              _buildSectionTitle('MACRONUTRIENTES'),
+              pw.SizedBox(height: 12),
+              ..._buildNutrientsList(page1Nutrients.sublist(1, 4)),
+              pw.SizedBox(height: 20),
+              _buildSectionTitle('FIBRA Y ÁCIDOS GRASOS'),
+              pw.SizedBox(height: 12),
+              ..._buildNutrientsList(page1Nutrients.sublist(4, 7)),
+              pw.SizedBox(height: 20),
+              _buildSectionTitle('VITAMINAS (Grupo 1)'),
+              pw.SizedBox(height: 12),
+              ..._buildNutrientsList(page1Nutrients.sublist(7)),
+            ],
+          );
+        },
+      ),
+    );
 
-            pw.SizedBox(height: 20),
+    // PÁGINA 2: Vitaminas E-D + Minerales
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPdfHeader(dateStr, '2/3'),
+              pw.SizedBox(height: 20),
+              _buildSectionTitle('VITAMINAS (Grupo 2)'),
+              pw.SizedBox(height: 12),
+              ..._buildNutrientsList(page2Nutrients.sublist(0, 7)),
+              pw.SizedBox(height: 20),
+              _buildSectionTitle('MINERALES'),
+              pw.SizedBox(height: 12),
+              ..._buildNutrientsList(page2Nutrients.sublist(7)),
+            ],
+          );
+        },
+      ),
+    );
 
-            // Resumen de calorías
-            pw.Container(
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(
-                color: PdfColors.grey200,
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    'Calorías',
-                    style: pw.TextStyle(
-                      fontSize: 16,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.Text(
-                    '${widget.report.calories.toStringAsFixed(0)} / ${widget.totalCaloriesGoal.toStringAsFixed(0)} kcal',
-                    style: const pw.TextStyle(
-                      fontSize: 16,
-                      color: PdfColors.green800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            pw.SizedBox(height: 20),
-
-            // Macronutrientes
-            pw.Text(
-              'MACRONUTRIENTES',
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.green900,
-              ),
-            ),
-            pw.SizedBox(height: 12),
-
-            _buildPdfNutrientRow(
-              'Proteínas',
-              widget.report.proteins,
-              widget.proteinGoalGrams,
-              'g',
-              proteinPct,
-            ),
-            _buildPdfNutrientRow(
-              'Carbohidratos',
-              widget.report.carbohydrates,
-              widget.carbsGoalGrams,
-              'g',
-              carbsPct,
-            ),
-            _buildPdfNutrientRow(
-              'Grasas',
-              widget.report.totalFats,
-              widget.fatGoalGrams,
-              'g',
-              fatsPct,
-            ),
-
-            pw.SizedBox(height: 20),
-
-            // Otros nutrientes importantes
-            pw.Text(
-              'NUTRIENTES PRINCIPALES',
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.green900,
-              ),
-            ),
-            pw.SizedBox(height: 12),
-
-            // Lista de nutrientes con valores > 0
-            ...nutrientOrder
-                .skip(4) // Saltar los 4 primeros (macros)
-                .map((key) {
-                  final value = _getNutrientValue(key);
-                  if (value <= 0 &&
-                      ![
-                        'omega3',
-                        'omega6',
-                        'vitaminB12',
-                        'vitaminD',
-                      ].contains(key)) {
-                    return pw.SizedBox.shrink();
-                  }
-
-                  Map<String, dynamic>? goalData = nutrientGoals[key];
-
-                  if (goalData != null && goalData['unit'] == 'mg/kg/day') {
-                    final mgPerKg = goalData['value'] as double;
-                    final totalMg = mgPerKg * widget.userWeight;
-                    final totalGrams = totalMg / 1000;
-                    goalData = {
-                      'value': totalGrams,
-                      'unit': 'g',
-                      'type': goalData['type'],
-                    };
-                  }
-
-                  if (goalData == null) return pw.SizedBox.shrink();
-
-                  final name = nutrientNameMapping[key];
-                  if (name == null) return pw.SizedBox.shrink();
-
-                  final goal = goalData['value'] as double;
-                  final pct = goal > 0 ? ((value / goal) * 100).round() : 0;
-
-                  return _buildPdfNutrientRow(
-                    name,
-                    value,
-                    goal,
-                    goalData['unit'],
-                    pct,
-                  );
-                })
-                .toList(),
-
-            pw.SizedBox(height: 20),
-
-            // Footer
-            pw.Divider(color: PdfColors.green700),
-            pw.SizedBox(height: 10),
-            pw.Center(
-              child: pw.Text(
-                'Generado por AcoFood 🌱',
+    // PÁGINA 3: Aminoácidos Esenciales
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPdfHeader(dateStr, '3/3'),
+              pw.SizedBox(height: 20),
+              _buildSectionTitle('AMINOÁCIDOS ESENCIALES'),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Requerimientos calculados en base a peso corporal: ${widget.userWeight.toStringAsFixed(1)} kg',
                 style: const pw.TextStyle(
                   fontSize: 10,
                   color: PdfColors.grey600,
                 ),
               ),
-            ),
-          ];
+              pw.SizedBox(height: 12),
+              ..._buildNutrientsList(page3Nutrients),
+            ],
+          );
         },
       ),
     );
@@ -481,8 +441,143 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     // Compartir el PDF
     await Printing.sharePdf(
       bytes: await pdf.save(),
-      filename: 'reporte_nutricional_$dateStr.pdf',
+      filename:
+          'reporte_nutricional_${DateFormat('dd-MM-yyyy').format(widget.selectedDate)}.pdf',
     );
+  }
+
+  // Helper: Header del PDF
+  pw.Widget _buildPdfHeader(String dateStr, String pageNumber) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.only(bottom: 20),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(
+          bottom: pw.BorderSide(width: 2, color: PdfColors.green700),
+        ),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Reporte Nutricional',
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.green900,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                dateStr,
+                style: const pw.TextStyle(
+                  fontSize: 14,
+                  color: PdfColors.grey700,
+                ),
+              ),
+            ],
+          ),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Text('AcoFood', style: const pw.TextStyle(fontSize: 24)),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'Página $pageNumber',
+                style: const pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper: Resumen de calorías
+  pw.Widget _buildCaloriesSummary() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(16),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey200,
+        borderRadius: pw.BorderRadius.circular(8),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'Calorías',
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.Text(
+            '${widget.report.calories.toStringAsFixed(0)} / ${widget.totalCaloriesGoal.toStringAsFixed(0)} kcal',
+            style: const pw.TextStyle(fontSize: 16, color: PdfColors.green800),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper: Título de sección
+  pw.Widget _buildSectionTitle(String title) {
+    return pw.Text(
+      title,
+      style: pw.TextStyle(
+        fontSize: 16,
+        fontWeight: pw.FontWeight.bold,
+        color: PdfColors.green900,
+      ),
+    );
+  }
+
+  // Helper: Lista de nutrientes para PDF
+  List<pw.Widget> _buildNutrientsList(List<String> nutrients) {
+    return nutrients.map((key) {
+      final value = _getNutrientValue(key);
+
+      Map<String, dynamic>? goalData;
+      if (key == 'proteins') {
+        goalData = {
+          'value': widget.proteinGoalGrams,
+          'unit': 'g',
+          'type': 'Meta',
+        };
+      } else if (key == 'carbohydrates') {
+        goalData = {
+          'value': widget.carbsGoalGrams,
+          'unit': 'g',
+          'type': 'Meta',
+        };
+      } else if (key == 'totalFats') {
+        goalData = {'value': widget.fatGoalGrams, 'unit': 'g', 'type': 'Meta'};
+      } else {
+        goalData = nutrientGoals[key];
+        if (goalData != null && goalData['unit'] == 'mg/kg/day') {
+          final mgPerKg = goalData['value'] as double;
+          final totalMg = mgPerKg * widget.userWeight;
+          final totalGrams = totalMg / 1000;
+          goalData = {
+            'value': totalGrams,
+            'unit': 'g',
+            'type': goalData['type'],
+          };
+        }
+      }
+
+      if (goalData == null) return pw.SizedBox.shrink();
+
+      final name = nutrientNameMapping[key];
+      if (name == null) return pw.SizedBox.shrink();
+
+      final goal = goalData['value'] as double;
+      final pct = goal > 0 ? ((value / goal) * 100).round() : 0;
+
+      return _buildPdfNutrientRow(name, value, goal, goalData['unit'], pct);
+    }).toList();
   }
 
   // Helper para construir filas de nutrientes en PDF
@@ -506,7 +601,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     }
 
     return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 12),
+      margin: const pw.EdgeInsets.only(bottom: 10),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -516,38 +611,38 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
               pw.Text(
                 name,
                 style: pw.TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: pw.FontWeight.bold,
                 ),
               ),
               pw.Text(
                 '${_formatValue(value)} / ${_formatValue(goal)} $unit ($percentage%)',
                 style: const pw.TextStyle(
-                  fontSize: 11,
+                  fontSize: 10,
                   color: PdfColors.grey700,
                 ),
               ),
             ],
           ),
-          pw.SizedBox(height: 4),
-          // Barra de progreso usando Row con Expanded
+          pw.SizedBox(height: 3),
           pw.Container(
-            height: 8,
+            height: 6,
             decoration: pw.BoxDecoration(
               color: PdfColors.grey300,
-              borderRadius: pw.BorderRadius.circular(4),
+              borderRadius: pw.BorderRadius.circular(3),
             ),
             child: pw.Row(
               children: [
-                pw.Expanded(
-                  flex: (progress * 100).round(),
-                  child: pw.Container(
-                    decoration: pw.BoxDecoration(
-                      color: barColor,
-                      borderRadius: pw.BorderRadius.circular(4),
+                if (progress > 0)
+                  pw.Expanded(
+                    flex: (progress * 100).round(),
+                    child: pw.Container(
+                      decoration: pw.BoxDecoration(
+                        color: barColor,
+                        borderRadius: pw.BorderRadius.circular(3),
+                      ),
                     ),
                   ),
-                ),
                 if (progress < 1.0)
                   pw.Expanded(
                     flex: ((1 - progress) * 100).round(),
@@ -561,6 +656,636 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     );
   }
 
+  // Mostrar selector de rango de fechas
+  Future<void> _showDateRangePicker(BuildContext context) async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: DateTimeRange(
+        start: widget.selectedDate.subtract(const Duration(days: 6)),
+        end: widget.selectedDate,
+      ),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).primaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && context.mounted) {
+      await _exportExcelReport(context, picked.start, picked.end);
+    }
+  }
+
+  // 🔧 REEMPLAZA la función _exportExcelReport completa (desde línea 679 hasta 951)
+  // en nutrition_report_sheet.dart con este código:
+
+  Future<void> _exportExcelReport(
+    BuildContext context,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    if (widget.getReportsForRange == null) {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Función no disponible'),
+            content: const Text(
+              'La exportación a Excel requiere que se proporcione la función '
+              'getReportsForRange al widget. Por favor contacta al desarrollador.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    bool loadingShown = false;
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+      loadingShown = true;
+    }
+
+    try {
+      final reports = await widget.getReportsForRange!(startDate, endDate);
+
+      if (reports.isEmpty) {
+        if (context.mounted && loadingShown) {
+          Navigator.pop(context);
+          loadingShown = false;
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ No hay datos en el rango seleccionado'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      final excel = Excel.createExcel();
+
+      // ========================================
+      // HOJA 1: Resumen Diario (formato ancho simplificado)
+      // ========================================
+      final summarySheet = excel['Resumen Diario'];
+      excel.setDefaultSheet('Resumen Diario');
+
+      summarySheet.cell(CellIndex.indexByString('A1')).value = TextCellValue(
+        'Fecha',
+      );
+      summarySheet.cell(CellIndex.indexByString('B1')).value = TextCellValue(
+        'Calorías',
+      );
+      summarySheet.cell(CellIndex.indexByString('C1')).value = TextCellValue(
+        'Proteínas (g)',
+      );
+      summarySheet.cell(CellIndex.indexByString('D1')).value = TextCellValue(
+        'Carbohidratos (g)',
+      );
+      summarySheet.cell(CellIndex.indexByString('E1')).value = TextCellValue(
+        'Grasas (g)',
+      );
+      summarySheet.cell(CellIndex.indexByString('F1')).value = TextCellValue(
+        'Fibra (g)',
+      );
+      summarySheet.cell(CellIndex.indexByString('G1')).value = TextCellValue(
+        'Omega-3 (g)',
+      );
+      summarySheet.cell(CellIndex.indexByString('H1')).value = TextCellValue(
+        'Omega-6 (g)',
+      );
+      summarySheet.cell(CellIndex.indexByString('I1')).value = TextCellValue(
+        'Vit A (µg)',
+      );
+      summarySheet.cell(CellIndex.indexByString('J1')).value = TextCellValue(
+        'Vit C (mg)',
+      );
+      summarySheet.cell(CellIndex.indexByString('K1')).value = TextCellValue(
+        'Vit D (µg)',
+      );
+      summarySheet.cell(CellIndex.indexByString('L1')).value = TextCellValue(
+        'Calcio (mg)',
+      );
+      summarySheet.cell(CellIndex.indexByString('M1')).value = TextCellValue(
+        'Hierro (mg)',
+      );
+      summarySheet.cell(CellIndex.indexByString('N1')).value = TextCellValue(
+        '% Calorías',
+      );
+      summarySheet.cell(CellIndex.indexByString('O1')).value = TextCellValue(
+        '% Proteínas',
+      );
+      summarySheet.cell(CellIndex.indexByString('P1')).value = TextCellValue(
+        '% Carbos',
+      );
+      summarySheet.cell(CellIndex.indexByString('Q1')).value = TextCellValue(
+        '% Grasas',
+      );
+
+      int row = 2;
+      for (final report in reports) {
+        final date = report['date'] as DateTime;
+        final nutritionReport = report['report'] as NutritionReport;
+
+        summarySheet.cell(CellIndex.indexByString('A$row')).value =
+            TextCellValue(DateFormat('dd/MM/yyyy').format(date));
+        summarySheet.cell(CellIndex.indexByString('B$row')).value =
+            DoubleCellValue(nutritionReport.calories);
+        summarySheet.cell(CellIndex.indexByString('C$row')).value =
+            DoubleCellValue(nutritionReport.proteins);
+        summarySheet.cell(CellIndex.indexByString('D$row')).value =
+            DoubleCellValue(nutritionReport.carbohydrates);
+        summarySheet.cell(CellIndex.indexByString('E$row')).value =
+            DoubleCellValue(nutritionReport.totalFats);
+        summarySheet.cell(CellIndex.indexByString('F$row')).value =
+            DoubleCellValue(nutritionReport.fiber);
+        summarySheet.cell(CellIndex.indexByString('G$row')).value =
+            DoubleCellValue(nutritionReport.omega3);
+        summarySheet.cell(CellIndex.indexByString('H$row')).value =
+            DoubleCellValue(nutritionReport.omega6);
+        summarySheet.cell(CellIndex.indexByString('I$row')).value =
+            DoubleCellValue(nutritionReport.vitaminA);
+        summarySheet.cell(CellIndex.indexByString('J$row')).value =
+            DoubleCellValue(nutritionReport.vitaminC);
+        summarySheet.cell(CellIndex.indexByString('K$row')).value =
+            DoubleCellValue(nutritionReport.vitaminD);
+        summarySheet.cell(CellIndex.indexByString('L$row')).value =
+            DoubleCellValue(nutritionReport.calcium);
+        summarySheet.cell(CellIndex.indexByString('M$row')).value =
+            DoubleCellValue(nutritionReport.iron);
+
+        final calPct = widget.totalCaloriesGoal > 0
+            ? (nutritionReport.calories / widget.totalCaloriesGoal) * 100
+            : 0.0;
+        final protPct = widget.proteinGoalGrams > 0
+            ? (nutritionReport.proteins / widget.proteinGoalGrams) * 100
+            : 0.0;
+        final carbPct = widget.carbsGoalGrams > 0
+            ? (nutritionReport.carbohydrates / widget.carbsGoalGrams) * 100
+            : 0.0;
+        final fatPct = widget.fatGoalGrams > 0
+            ? (nutritionReport.totalFats / widget.fatGoalGrams) * 100
+            : 0.0;
+
+        summarySheet.cell(CellIndex.indexByString('N$row')).value =
+            DoubleCellValue(calPct);
+        summarySheet.cell(CellIndex.indexByString('O$row')).value =
+            DoubleCellValue(protPct);
+        summarySheet.cell(CellIndex.indexByString('P$row')).value =
+            DoubleCellValue(carbPct);
+        summarySheet.cell(CellIndex.indexByString('Q$row')).value =
+            DoubleCellValue(fatPct);
+
+        row++;
+      }
+
+      // ========================================
+      // HOJA 2: Datos Completos (formato largo para Pivot Tables)
+      // ========================================
+      final detailSheet = excel['Datos Completos'];
+
+      detailSheet.cell(CellIndex.indexByString('A1')).value = TextCellValue(
+        'Fecha',
+      );
+      detailSheet.cell(CellIndex.indexByString('B1')).value = TextCellValue(
+        'Nutriente',
+      );
+      detailSheet.cell(CellIndex.indexByString('C1')).value = TextCellValue(
+        'Valor',
+      );
+      detailSheet.cell(CellIndex.indexByString('D1')).value = TextCellValue(
+        'Unidad',
+      );
+      detailSheet.cell(CellIndex.indexByString('E1')).value = TextCellValue(
+        'Meta',
+      );
+      detailSheet.cell(CellIndex.indexByString('F1')).value = TextCellValue(
+        'Porcentaje',
+      );
+      detailSheet.cell(CellIndex.indexByString('G1')).value = TextCellValue(
+        'Categoría',
+      );
+
+      int detailRow = 2;
+      for (final report in reports) {
+        final date = report['date'] as DateTime;
+        final nutritionReport = report['report'] as NutritionReport;
+        final dateStr = DateFormat('dd/MM/yyyy').format(date);
+
+        for (final nutrientKey in nutrientOrder) {
+          final value = _getNutrientValueFromReport(
+            nutritionReport,
+            nutrientKey,
+          );
+
+          double goal = 0;
+          String unit = '';
+          String category = '';
+
+          if (nutrientKey == 'calories') {
+            goal = widget.totalCaloriesGoal;
+            unit = 'kcal';
+            category = 'Macronutrientes';
+          } else if (nutrientKey == 'proteins') {
+            goal = widget.proteinGoalGrams;
+            unit = 'g';
+            category = 'Macronutrientes';
+          } else if (nutrientKey == 'carbohydrates') {
+            goal = widget.carbsGoalGrams;
+            unit = 'g';
+            category = 'Macronutrientes';
+          } else if (nutrientKey == 'totalFats') {
+            goal = widget.fatGoalGrams;
+            unit = 'g';
+            category = 'Macronutrientes';
+          } else {
+            final goalData = nutrientGoals[nutrientKey];
+            if (goalData != null) {
+              goal = goalData['value'] as double;
+              unit = goalData['unit'] as String;
+
+              if (unit == 'mg/kg/day') {
+                final totalMg = goal * widget.userWeight;
+                goal = totalMg / 1000;
+                unit = 'g';
+              }
+
+              if (nutrientKey.startsWith('vitamin')) {
+                category = 'Vitaminas';
+              } else if ([
+                'histidine',
+                'isoleucine',
+                'leucine',
+                'lysine',
+                'methionine',
+                'phenylalanine',
+                'threonine',
+                'tryptophan',
+                'valine',
+              ].contains(nutrientKey)) {
+                category = 'Aminoácidos';
+              } else if (['fiber', 'omega3', 'omega6'].contains(nutrientKey)) {
+                category = 'Fibra y Ácidos Grasos';
+              } else {
+                category = 'Minerales';
+              }
+            }
+          }
+
+          final percentage = goal > 0 ? (value / goal) * 100 : 0.0;
+          final name = nutrientNameMapping[nutrientKey] ?? nutrientKey;
+
+          detailSheet.cell(CellIndex.indexByString('A$detailRow')).value =
+              TextCellValue(dateStr);
+          detailSheet.cell(CellIndex.indexByString('B$detailRow')).value =
+              TextCellValue(name);
+          detailSheet.cell(CellIndex.indexByString('C$detailRow')).value =
+              DoubleCellValue(value);
+          detailSheet.cell(CellIndex.indexByString('D$detailRow')).value =
+              TextCellValue(unit);
+          detailSheet.cell(CellIndex.indexByString('E$detailRow')).value =
+              DoubleCellValue(goal);
+          detailSheet.cell(CellIndex.indexByString('F$detailRow')).value =
+              DoubleCellValue(percentage);
+          detailSheet.cell(CellIndex.indexByString('G$detailRow')).value =
+              TextCellValue(category);
+
+          detailRow++;
+        }
+      }
+
+      // ========================================
+      // ⭐ HOJA 3: Análisis por Día (NUEVA - formato ultra ancho)
+      // ========================================
+      final analysisSheet = excel['Análisis por Día'];
+
+      // Headers - Triples por nutriente importante (Valor, Meta/RDA/AI, %)
+      int col = 0;
+      analysisSheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: col++, rowIndex: 0))
+          .value = TextCellValue(
+        'Fecha',
+      );
+
+      // Lista de nutrientes clave para análisis
+      final keyNutrients = [
+        'calories',
+        'proteins',
+        'carbohydrates',
+        'totalFats',
+        'fiber',
+        'omega3',
+        'omega6',
+        'calcium',
+        'iron',
+        'magnesium',
+        'zinc',
+        'vitaminA',
+        'vitaminB1',
+        'vitaminB2',
+        'vitaminB3',
+        'vitaminB6',
+        'vitaminB9',
+        'vitaminB12',
+        'vitaminC',
+        'vitaminD',
+        'vitaminE',
+        'vitaminK',
+      ];
+
+      for (final nutrientKey in keyNutrients) {
+        final name = nutrientNameMapping[nutrientKey] ?? nutrientKey;
+
+        // Determinar si es Meta, RDA o AI
+        String goalType = 'Meta';
+        if (![
+          'calories',
+          'proteins',
+          'carbohydrates',
+          'totalFats',
+        ].contains(nutrientKey)) {
+          final goalData = nutrientGoals[nutrientKey];
+          if (goalData != null) {
+            goalType = goalData['type'] as String;
+          }
+        }
+
+        // Columna 1: Valor
+        analysisSheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: col++, rowIndex: 0))
+            .value = TextCellValue(
+          name,
+        );
+
+        // Columna 2: Meta/RDA/AI
+        analysisSheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: col++, rowIndex: 0))
+            .value = TextCellValue(
+          '$name $goalType',
+        );
+
+        // Columna 3: Porcentaje
+        analysisSheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: col++, rowIndex: 0))
+            .value = TextCellValue(
+          '$name %',
+        );
+      }
+
+      // Datos por día
+      int analysisRow = 1;
+      for (final report in reports) {
+        final date = report['date'] as DateTime;
+        final nutritionReport = report['report'] as NutritionReport;
+
+        int analysisCol = 0;
+
+        // Fecha
+        analysisSheet
+            .cell(
+              CellIndex.indexByColumnRow(
+                columnIndex: analysisCol++,
+                rowIndex: analysisRow,
+              ),
+            )
+            .value = TextCellValue(
+          DateFormat('dd/MM/yyyy').format(date),
+        );
+
+        // Cada nutriente: Valor, Meta/RDA/AI, %
+        for (final nutrientKey in keyNutrients) {
+          final value = _getNutrientValueFromReport(
+            nutritionReport,
+            nutrientKey,
+          );
+
+          double goal = 0;
+
+          if (nutrientKey == 'calories') {
+            goal = widget.totalCaloriesGoal;
+          } else if (nutrientKey == 'proteins') {
+            goal = widget.proteinGoalGrams;
+          } else if (nutrientKey == 'carbohydrates') {
+            goal = widget.carbsGoalGrams;
+          } else if (nutrientKey == 'totalFats') {
+            goal = widget.fatGoalGrams;
+          } else {
+            final goalData = nutrientGoals[nutrientKey];
+            if (goalData != null) {
+              goal = goalData['value'] as double;
+              final unit = goalData['unit'] as String;
+
+              if (unit == 'mg/kg/day') {
+                final totalMg = goal * widget.userWeight;
+                goal = totalMg / 1000;
+              }
+            }
+          }
+
+          final percentage = goal > 0 ? (value / goal) * 100 : 0.0;
+
+          // Valor
+          analysisSheet
+              .cell(
+                CellIndex.indexByColumnRow(
+                  columnIndex: analysisCol++,
+                  rowIndex: analysisRow,
+                ),
+              )
+              .value = DoubleCellValue(
+            value,
+          );
+
+          // Meta/RDA/AI
+          analysisSheet
+              .cell(
+                CellIndex.indexByColumnRow(
+                  columnIndex: analysisCol++,
+                  rowIndex: analysisRow,
+                ),
+              )
+              .value = DoubleCellValue(
+            goal,
+          );
+
+          // Porcentaje
+          analysisSheet
+              .cell(
+                CellIndex.indexByColumnRow(
+                  columnIndex: analysisCol++,
+                  rowIndex: analysisRow,
+                ),
+              )
+              .value = DoubleCellValue(
+            percentage,
+          );
+        }
+
+        analysisRow++;
+      }
+
+      // 🗑️ Eliminar hoja Sheet1 vacía (si existe)
+      try {
+        excel.delete('Sheet1');
+      } catch (e) {
+        print('Sheet1 no encontrada: $e');
+      }
+
+      // Guardar archivo
+      final bytes = excel.encode();
+      if (bytes == null) throw Exception('Error al generar Excel');
+
+      final directory = await getTemporaryDirectory();
+      final filePath =
+          '${directory.path}/reporte_nutricional_${DateFormat('dd-MM-yyyy').format(startDate)}_a_${DateFormat('dd-MM-yyyy').format(endDate)}.xlsx';
+      final file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      if (context.mounted && loadingShown) {
+        Navigator.pop(context);
+        loadingShown = false;
+      }
+
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text:
+            'Reporte Nutricional ${DateFormat('dd/MM/yyyy').format(startDate)} - ${DateFormat('dd/MM/yyyy').format(endDate)}',
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Excel generado exitosamente (3 hojas)'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted && loadingShown) {
+        Navigator.pop(context);
+        loadingShown = false;
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error al generar Excel: $e'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  double _getNutrientValueFromReport(NutritionReport report, String key) {
+    switch (key) {
+      case 'calories':
+        return report.calories;
+      case 'proteins':
+        return report.proteins;
+      case 'carbohydrates':
+        return report.carbohydrates;
+      case 'totalFats':
+        return report.totalFats;
+      case 'fiber':
+        return report.fiber;
+      case 'omega3':
+        return report.omega3;
+      case 'omega6':
+        return report.omega6;
+      case 'calcium':
+        return report.calcium;
+      case 'iron':
+        return report.iron;
+      case 'magnesium':
+        return report.magnesium;
+      case 'phosphorus':
+        return report.phosphorus;
+      case 'potassium':
+        return report.potassium;
+      case 'sodium':
+        return report.sodium;
+      case 'zinc':
+        return report.zinc;
+      case 'copper':
+        return report.copper;
+      case 'manganese':
+        return report.manganese;
+      case 'selenium':
+        return report.selenium;
+      case 'vitaminA':
+        return report.vitaminA;
+      case 'vitaminC':
+        return report.vitaminC;
+      case 'vitaminE':
+        return report.vitaminE;
+      case 'vitaminK':
+        return report.vitaminK;
+      case 'vitaminB1':
+        return report.vitaminB1;
+      case 'vitaminB2':
+        return report.vitaminB2;
+      case 'vitaminB3':
+        return report.vitaminB3;
+      case 'vitaminB4':
+        return report.vitaminB4;
+      case 'vitaminB5':
+        return report.vitaminB5;
+      case 'vitaminB6':
+        return report.vitaminB6;
+      case 'vitaminB7':
+        return report.vitaminB7;
+      case 'vitaminB9':
+        return report.vitaminB9;
+      case 'vitaminB12':
+        return report.vitaminB12;
+      case 'vitaminD':
+        return report.vitaminD;
+      case 'iodine':
+        return report.iodine;
+      case 'histidine':
+        return report.histidine;
+      case 'isoleucine':
+        return report.isoleucine;
+      case 'leucine':
+        return report.leucine;
+      case 'lysine':
+        return report.lysine;
+      case 'methionine':
+        return report.methionine;
+      case 'phenylalanine':
+        return report.phenylalanine;
+      case 'threonine':
+        return report.threonine;
+      case 'tryptophan':
+        return report.tryptophan;
+      case 'valine':
+        return report.valine;
+      default:
+        return 0.0;
+    }
+  }
+
   String _formatValue(double val) {
     if (val < 1.0) {
       return val.toStringAsFixed(2);
@@ -571,6 +1296,9 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Guardar el context para usarlo en callbacks asíncronos
+    _scaffoldContext = context;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.9,
       minChildSize: 0.5,
@@ -651,7 +1379,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 48),
                     ),
-                    onPressed: () => _showExportMenu(context),
+                    onPressed: () => _showExportMenu(_scaffoldContext),
                   ),
                 ),
               ],
@@ -737,94 +1465,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
   }
 
   double _getNutrientValue(String key) {
-    switch (key) {
-      case 'calories':
-        return widget.report.calories;
-      case 'proteins':
-        return widget.report.proteins;
-      case 'carbohydrates':
-        return widget.report.carbohydrates;
-      case 'totalFats':
-        return widget.report.totalFats;
-      case 'fiber':
-        return widget.report.fiber;
-      case 'saturatedFats':
-        return widget.report.saturatedFats;
-      case 'omega3':
-        return widget.report.omega3;
-      case 'omega6':
-        return widget.report.omega6;
-      case 'calcium':
-        return widget.report.calcium;
-      case 'iron':
-        return widget.report.iron;
-      case 'magnesium':
-        return widget.report.magnesium;
-      case 'phosphorus':
-        return widget.report.phosphorus;
-      case 'potassium':
-        return widget.report.potassium;
-      case 'sodium':
-        return widget.report.sodium;
-      case 'zinc':
-        return widget.report.zinc;
-      case 'copper':
-        return widget.report.copper;
-      case 'manganese':
-        return widget.report.manganese;
-      case 'selenium':
-        return widget.report.selenium;
-      case 'vitaminA':
-        return widget.report.vitaminA;
-      case 'vitaminC':
-        return widget.report.vitaminC;
-      case 'vitaminE':
-        return widget.report.vitaminE;
-      case 'vitaminK':
-        return widget.report.vitaminK;
-      case 'vitaminB1':
-        return widget.report.vitaminB1;
-      case 'vitaminB2':
-        return widget.report.vitaminB2;
-      case 'vitaminB3':
-        return widget.report.vitaminB3;
-      case 'vitaminB4':
-        return widget.report.vitaminB4;
-      case 'vitaminB5':
-        return widget.report.vitaminB5;
-      case 'vitaminB6':
-        return widget.report.vitaminB6;
-      case 'vitaminB7':
-        return widget.report.vitaminB7;
-      case 'vitaminB9':
-        return widget.report.vitaminB9;
-      case 'vitaminB12':
-        return widget.report.vitaminB12;
-      case 'vitaminD':
-        return widget.report.vitaminD;
-      case 'iodine':
-        return widget.report.iodine;
-      case 'histidine':
-        return widget.report.histidine;
-      case 'isoleucine':
-        return widget.report.isoleucine;
-      case 'leucine':
-        return widget.report.leucine;
-      case 'lysine':
-        return widget.report.lysine;
-      case 'methionine':
-        return widget.report.methionine;
-      case 'phenylalanine':
-        return widget.report.phenylalanine;
-      case 'threonine':
-        return widget.report.threonine;
-      case 'tryptophan':
-        return widget.report.tryptophan;
-      case 'valine':
-        return widget.report.valine;
-      default:
-        return 0.0;
-    }
+    return _getNutrientValueFromReport(widget.report, key);
   }
 
   Widget _buildDateHeader() {

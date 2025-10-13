@@ -4,6 +4,8 @@ import 'models/user_profile.dart';
 import 'services/database_service.dart';
 
 import 'dart:async';
+import 'dart:convert';
+
 import 'models/food_entry.dart';
 import 'models/food_group.dart';
 import 'data/food_groups.dart';
@@ -60,7 +62,7 @@ class _HomePageState extends State<HomePage> {
   bool _scaleExpanded = false;
   bool _isSearchFocused = false;
   bool _showBottomContent = true; // Controla cuándo mostrar macros/historial
-  
+
   // Variables para recordatorios
   bool _b12Completed = false;
   bool _linoCompleted = false;
@@ -77,7 +79,7 @@ class _HomePageState extends State<HomePage> {
   DateTime _selectedDate = DateTime.now();
   bool _isListView = false;
   final FocusNode _searchFocusNode = FocusNode();
-  
+
   double get _netWeight => (_weight - _tareWeight).abs();
 
   List<FoodEntry> _history = [];
@@ -525,7 +527,8 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _b12Completed = prefs.getBool('b12_completed_$todayKey') ?? false;
       _linoCompleted = prefs.getBool('lino_completed_$todayKey') ?? false;
-      _legumbresCompleted = prefs.getBool('legumbres_completed_$todayKey') ?? false;
+      _legumbresCompleted =
+          prefs.getBool('legumbres_completed_$todayKey') ?? false;
       _yodoCompleted = prefs.getBool('yodo_completed_$todayKey') ?? false;
 
       _b12Enabled = prefs.getBool('b12_enabled') ?? true;
@@ -539,7 +542,7 @@ class _HomePageState extends State<HomePage> {
     if (key == 'b12') {
       final b12Supplement = supplementsList.firstWhere((s) => s.id == 9001);
       final wasRegistered = await _openSupplementSheet(b12Supplement);
-      
+
       if (wasRegistered == true) {
         setState(() => _b12Completed = true);
         final prefs = await SharedPreferences.getInstance();
@@ -650,9 +653,9 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al exportar: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al exportar: $e')));
       }
     }
   }
@@ -738,7 +741,9 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => FoodAmountSheet(
         food: entry.food,
         isScaleConnected: _isScaleConnected,
-        weightStream: _weightController.stream.map((w) => (w - _tareWeight).abs()),
+        weightStream: _weightController.stream.map(
+          (w) => (w - _tareWeight).abs(),
+        ),
         onTare: _setTare,
       ),
     );
@@ -754,9 +759,9 @@ class _HomePageState extends State<HomePage> {
       await DatabaseService.instance.updateEntry(updatedEntry);
       _loadHistory();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cantidad actualizada')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cantidad actualizada')));
     }
   }
 
@@ -783,9 +788,9 @@ class _HomePageState extends State<HomePage> {
       await DatabaseService.instance.deleteEntry(entry.id!);
       _loadHistory();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registro eliminado')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Registro eliminado')));
     }
   }
 
@@ -800,10 +805,15 @@ class _HomePageState extends State<HomePage> {
     final tomorrow = _selectedDate.add(const Duration(days: 1));
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final tomorrowNormalized = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+    final tomorrowNormalized = DateTime(
+      tomorrow.year,
+      tomorrow.month,
+      tomorrow.day,
+    );
 
     // Solo avanzar si tomorrow es hoy o anterior (no permitir fechas futuras)
-    if (tomorrowNormalized.isBefore(today) || tomorrowNormalized.isAtSameMomentAs(today)) {
+    if (tomorrowNormalized.isBefore(today) ||
+        tomorrowNormalized.isAtSameMomentAs(today)) {
       setState(() {
         _selectedDate = tomorrow;
       });
@@ -831,7 +841,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadHistory() async {
-    final entries = await DatabaseService.instance.getEntriesByDate(_selectedDate);
+    final entries = await DatabaseService.instance.getEntriesByDate(
+      _selectedDate,
+    );
     setState(() {
       _history = entries;
     });
@@ -904,51 +916,53 @@ class _HomePageState extends State<HomePage> {
   Future<void> _recalculateTotals() async {
     // Si no hay nada en el historial, crear un reporte vacío en lugar de null
     if (_history.isEmpty) {
-      setState(() => _currentReport = NutritionReport(
-        calories: 0,
-        proteins: 0,
-        carbohydrates: 0,
-        totalFats: 0,
-        fiber: 0,
-        // Todos los demás valores en 0
-        calcium: 0,
-        iron: 0,
-        magnesium: 0,
-        phosphorus: 0,
-        potassium: 0,
-        sodium: 0,
-        zinc: 0,
-        copper: 0,
-        manganese: 0,
-        selenium: 0,
-        iodine: 0,
-        vitaminA: 0,
-        vitaminC: 0,
-        vitaminD: 0,
-        vitaminE: 0,
-        vitaminK: 0,
-        vitaminB1: 0,
-        vitaminB2: 0,
-        vitaminB3: 0,
-        vitaminB4: 0,
-        vitaminB5: 0,
-        vitaminB6: 0,
-        vitaminB7: 0,
-        vitaminB9: 0,
-        vitaminB12: 0,
-        omega3: 0,
-        omega6: 0,
-        omega9: 0,
-        histidine: 0,
-        isoleucine: 0,
-        leucine: 0,
-        lysine: 0,
-        methionine: 0,
-        phenylalanine: 0,
-        threonine: 0,
-        tryptophan: 0,
-        valine: 0,
-      ));
+      setState(
+        () => _currentReport = NutritionReport(
+          calories: 0,
+          proteins: 0,
+          carbohydrates: 0,
+          totalFats: 0,
+          fiber: 0,
+          // Todos los demás valores en 0
+          calcium: 0,
+          iron: 0,
+          magnesium: 0,
+          phosphorus: 0,
+          potassium: 0,
+          sodium: 0,
+          zinc: 0,
+          copper: 0,
+          manganese: 0,
+          selenium: 0,
+          iodine: 0,
+          vitaminA: 0,
+          vitaminC: 0,
+          vitaminD: 0,
+          vitaminE: 0,
+          vitaminK: 0,
+          vitaminB1: 0,
+          vitaminB2: 0,
+          vitaminB3: 0,
+          vitaminB4: 0,
+          vitaminB5: 0,
+          vitaminB6: 0,
+          vitaminB7: 0,
+          vitaminB9: 0,
+          vitaminB12: 0,
+          omega3: 0,
+          omega6: 0,
+          omega9: 0,
+          histidine: 0,
+          isoleucine: 0,
+          leucine: 0,
+          lysine: 0,
+          methionine: 0,
+          phenylalanine: 0,
+          threonine: 0,
+          tryptophan: 0,
+          valine: 0,
+        ),
+      );
       return;
     }
 
@@ -958,6 +972,56 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _currentReport = report;
     });
+
+    // ⭐ AGREGAR ESTO - Guardar el reporte en SharedPreferences
+    if (report != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final json = {
+        'calories': report.calories,
+        'proteins': report.proteins,
+        'carbohydrates': report.carbohydrates,
+        'totalFats': report.totalFats,
+        'fiber': report.fiber,
+        'omega3': report.omega3,
+        'omega6': report.omega6,
+        'calcium': report.calcium,
+        'iron': report.iron,
+        'magnesium': report.magnesium,
+        'phosphorus': report.phosphorus,
+        'potassium': report.potassium,
+        'sodium': report.sodium,
+        'zinc': report.zinc,
+        'copper': report.copper,
+        'manganese': report.manganese,
+        'selenium': report.selenium,
+        'vitaminA': report.vitaminA,
+        'vitaminC': report.vitaminC,
+        'vitaminE': report.vitaminE,
+        'vitaminK': report.vitaminK,
+        'vitaminB1': report.vitaminB1,
+        'vitaminB2': report.vitaminB2,
+        'vitaminB3': report.vitaminB3,
+        'vitaminB4': report.vitaminB4,
+        'vitaminB5': report.vitaminB5,
+        'vitaminB6': report.vitaminB6,
+        'vitaminB7': report.vitaminB7,
+        'vitaminB9': report.vitaminB9,
+        'vitaminB12': report.vitaminB12,
+        'vitaminD': report.vitaminD,
+        'iodine': report.iodine,
+        'histidine': report.histidine,
+        'isoleucine': report.isoleucine,
+        'leucine': report.leucine,
+        'lysine': report.lysine,
+        'methionine': report.methionine,
+        'phenylalanine': report.phenylalanine,
+        'threonine': report.threonine,
+        'tryptophan': report.tryptophan,
+        'valine': report.valine,
+      };
+      await prefs.setString('nutrition_report_$dateKey', jsonEncode(json));
+    }
   }
 
   Future<void> _loadHistoryForDate(DateTime date) async {
@@ -965,9 +1029,10 @@ class _HomePageState extends State<HomePage> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final dateNormalized = DateTime(date.year, date.month, date.day);
-    
+
     // Solo permitir si la fecha es hoy o anterior
-    if (dateNormalized.isBefore(today) || dateNormalized.isAtSameMomentAs(today)) {
+    if (dateNormalized.isBefore(today) ||
+        dateNormalized.isAtSameMomentAs(today)) {
       final entries = await DatabaseService.instance.getEntriesByDate(date);
 
       setState(() {
@@ -977,6 +1042,109 @@ class _HomePageState extends State<HomePage> {
 
       await _recalculateTotals();
     }
+  }
+
+  // 🔧 REEMPLAZA tu función _getReportsForDateRange en home_page.dart con esta:
+
+  Future<List<Map<String, dynamic>>> _getReportsForDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final results = <Map<String, dynamic>>[];
+
+    DateTime current = start;
+    while (current.isBefore(end.add(const Duration(days: 1)))) {
+      final key =
+          'nutrition_report_${DateFormat('yyyy-MM-dd').format(current)}';
+      final jsonStr = prefs.getString(key);
+
+      NutritionReport? report;
+
+      if (jsonStr != null) {
+        // ✅ Existe en cache - usar directamente
+        try {
+          report = NutritionReport.fromJson(jsonDecode(jsonStr));
+          print('✅ Cache hit: $key');
+        } catch (e) {
+          print('❌ Error al parsear cache de $key: $e');
+        }
+      } else {
+        // ⚠️ No existe en cache - calcular en tiempo real
+        print('⚠️ Cache miss: $key - calculando desde DB...');
+
+        final entries = await DatabaseService.instance.getEntriesByDate(
+          current,
+        );
+
+        if (entries.isNotEmpty) {
+          report = await _calculator.calculateDailyTotals(entries);
+
+          // 💾 Guardar en cache para la próxima vez
+          final json = {
+            'calories': report.calories,
+            'proteins': report.proteins,
+            'carbohydrates': report.carbohydrates,
+            'totalFats': report.totalFats,
+            'fiber': report.fiber,
+            'omega3': report.omega3,
+            'omega6': report.omega6,
+            'calcium': report.calcium,
+            'iron': report.iron,
+            'magnesium': report.magnesium,
+            'phosphorus': report.phosphorus,
+            'potassium': report.potassium,
+            'sodium': report.sodium,
+            'zinc': report.zinc,
+            'copper': report.copper,
+            'manganese': report.manganese,
+            'selenium': report.selenium,
+            'vitaminA': report.vitaminA,
+            'vitaminC': report.vitaminC,
+            'vitaminE': report.vitaminE,
+            'vitaminK': report.vitaminK,
+            'vitaminB1': report.vitaminB1,
+            'vitaminB2': report.vitaminB2,
+            'vitaminB3': report.vitaminB3,
+            'vitaminB4': report.vitaminB4,
+            'vitaminB5': report.vitaminB5,
+            'vitaminB6': report.vitaminB6,
+            'vitaminB7': report.vitaminB7,
+            'vitaminB9': report.vitaminB9,
+            'vitaminB12': report.vitaminB12,
+            'vitaminD': report.vitaminD,
+            'iodine': report.iodine,
+            'histidine': report.histidine,
+            'isoleucine': report.isoleucine,
+            'leucine': report.leucine,
+            'lysine': report.lysine,
+            'methionine': report.methionine,
+            'phenylalanine': report.phenylalanine,
+            'threonine': report.threonine,
+            'tryptophan': report.tryptophan,
+            'valine': report.valine,
+          };
+
+          await prefs.setString(key, jsonEncode(json));
+          print(
+            '💾 Calculado y guardado en cache: $key (${entries.length} entries)',
+          );
+        } else {
+          print('⚠️ Sin datos para: $key');
+        }
+      }
+
+      if (report != null) {
+        results.add({'date': current, 'report': report});
+      }
+
+      current = current.add(const Duration(days: 1));
+    }
+
+    print(
+      '📊 Total reportes encontrados: ${results.length} de ${end.difference(start).inDays + 1} días solicitados',
+    );
+    return results;
   }
 
   Future<void> _showNutritionReport() async {
@@ -991,7 +1159,8 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
-          final totalCaloriesGoal = widget.profile.goalCalories?.toDouble() ??
+          final totalCaloriesGoal =
+              widget.profile.goalCalories?.toDouble() ??
               CalorieCalculator.calculateRecommendedCalories(
                 dob: widget.profile.dob ?? DateTime(1990),
                 gender: widget.profile.gender ?? 'male',
@@ -1023,6 +1192,7 @@ class _HomePageState extends State<HomePage> {
                 setModalState(() {});
               }
             },
+            getReportsForRange: _getReportsForDateRange,
           );
         },
       ),
@@ -1036,7 +1206,9 @@ class _HomePageState extends State<HomePage> {
       builder: (ctx) => FoodAmountSheet(
         food: food,
         isScaleConnected: true,
-        weightStream: _weightController.stream.map((w) => (w - _tareWeight).abs()),
+        weightStream: _weightController.stream.map(
+          (w) => (w - _tareWeight).abs(),
+        ),
         onTare: _setTare,
       ),
     );
@@ -1048,11 +1220,7 @@ class _HomePageState extends State<HomePage> {
       final fullFood = _foodRepo.getFoodById(food.id!);
       if (fullFood != null) {
         _pendingIngredients.add(
-          RecipeIngredient(
-            recipeId: 0,
-            food: fullFood,
-            grams: grams,
-          ),
+          RecipeIngredient(recipeId: 0, food: fullFood, grams: grams),
         );
 
         if (!mounted) return;
@@ -1189,75 +1357,75 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-Future<void> _saveAsRecipe() async {
-  // Colapsar historial/macros primero (igual que al buscar)
-  setState(() {
-    _showBottomContent = false;
-  });
-  
-  // Pequeña pausa para que se complete la animación
-  await Future.delayed(const Duration(milliseconds: 150));
-  
-  final nameController = TextEditingController();
-
-  final recipeName = await showDialog<String>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Nombre de la receta'),
-      content: TextField(
-        controller: nameController,
-        decoration: const InputDecoration(
-          hintText: 'Ej: Desayuno habitual',
-          border: OutlineInputBorder(),
-        ),
-        autofocus: true,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            if (nameController.text.isNotEmpty) {
-              Navigator.pop(context, nameController.text);
-            }
-          },
-          child: const Text('Guardar'),
-        ),
-      ],
-    ),
-  );
-
-  // Restaurar historial/macros después de cerrar el diálogo
-  if (mounted) {
+  Future<void> _saveAsRecipe() async {
+    // Colapsar historial/macros primero (igual que al buscar)
     setState(() {
-      _showBottomContent = true;
+      _showBottomContent = false;
     });
-  }
 
-  if (recipeName != null && recipeName.isNotEmpty) {
-    final recipe = Recipe(
-      name: recipeName,
-      emoji: '🍽️',
-      createdAt: DateTime.now(),
+    // Pequeña pausa para que se complete la animación
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    final nameController = TextEditingController();
+
+    final recipeName = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nombre de la receta'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            hintText: 'Ej: Desayuno habitual',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                Navigator.pop(context, nameController.text);
+              }
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
     );
 
-    await DatabaseService.instance.saveRecipe(recipe, _pendingIngredients);
-
+    // Restaurar historial/macros después de cerrar el diálogo
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Receta "$recipeName" guardada'),
-          duration: const Duration(seconds: 2),
-        ),
+      setState(() {
+        _showBottomContent = true;
+      });
+    }
+
+    if (recipeName != null && recipeName.isNotEmpty) {
+      final recipe = Recipe(
+        name: recipeName,
+        emoji: '🍽️',
+        createdAt: DateTime.now(),
       );
+
+      await DatabaseService.instance.saveRecipe(recipe, _pendingIngredients);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Receta "$recipeName" guardada'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
-}
 
   // ✅ DIÁLOGO CON SCROLL (mejora de v3)
-Future<void> _showVariantDialog(FoodGroupDisplay group) async {
+  Future<void> _showVariantDialog(FoodGroupDisplay group) async {
     final selected = await showDialog<Food>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1388,7 +1556,8 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
       }
     }
 
-    final double totalCaloriesGoal = widget.profile.goalCalories?.toDouble() ??
+    final double totalCaloriesGoal =
+        widget.profile.goalCalories?.toDouble() ??
         CalorieCalculator.calculateRecommendedCalories(
           dob: widget.profile.dob ?? DateTime(1990),
           gender: widget.profile.gender ?? 'male',
@@ -1406,7 +1575,8 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
     final double fatGoalGrams =
         (totalCaloriesGoal * ((widget.profile.fat ?? 20) / 100)) / 9;
 
-    final double proteinPercentage = _currentReport != null && proteinGoalGrams > 0
+    final double proteinPercentage =
+        _currentReport != null && proteinGoalGrams > 0
         ? _currentReport!.proteins / proteinGoalGrams
         : 0.0;
     final double carbsPercentage = _currentReport != null && carbsGoalGrams > 0
@@ -1446,7 +1616,8 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (context) => HabitsModal(onSettingsTap: _showHabitsSettings),
+                  builder: (context) =>
+                      HabitsModal(onSettingsTap: _showHabitsSettings),
                 );
               },
             ),
@@ -1497,9 +1668,13 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
               child: Column(
                 children: [
                   InkWell(
-                    onTap: () => setState(() => _scaleExpanded = !_scaleExpanded),
+                    onTap: () =>
+                        setState(() => _scaleExpanded = !_scaleExpanded),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       child: Row(
                         children: [
                           if (!_isScaleConnected)
@@ -1538,7 +1713,10 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                               ),
                               onPressed: _weight != 0 ? _setTare : null,
                               icon: const Icon(Icons.exposure_zero, size: 16),
-                              label: const Text('TARA', style: TextStyle(fontSize: 12)),
+                              label: const Text(
+                                'TARA',
+                                style: TextStyle(fontSize: 12),
+                              ),
                             )
                           else
                             TextButton.icon(
@@ -1551,11 +1729,16 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                               ),
                               onPressed: _resetTare,
                               icon: const Icon(Icons.refresh, size: 14),
-                              label: const Text('RESET', style: TextStyle(fontSize: 12)),
+                              label: const Text(
+                                'RESET',
+                                style: TextStyle(fontSize: 12),
+                              ),
                             ),
                           const SizedBox(width: 4),
                           Icon(
-                            _scaleExpanded ? Icons.expand_less : Icons.expand_more,
+                            _scaleExpanded
+                                ? Icons.expand_less
+                                : Icons.expand_more,
                             size: 20,
                           ),
                         ],
@@ -1704,7 +1887,8 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                           }
                           return const SizedBox.shrink();
                         } else {
-                          final supplement = supplementsList[index - displayItems.length];
+                          final supplement =
+                              supplementsList[index - displayItems.length];
                           return GestureDetector(
                             onTap: () => _openSupplementSheet(supplement),
                             child: Card(
@@ -1741,7 +1925,10 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                 children: [
                   if (_currentReport != null)
                     Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       elevation: 2,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1772,7 +1959,8 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                                           vertical: 8,
                                         ),
                                         minimumSize: const Size(0, 0),
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
                                       ),
                                       onPressed: () async {
                                         if (_currentReport != null) {
@@ -1797,7 +1985,8 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                                           vertical: 8,
                                         ),
                                         minimumSize: const Size(0, 0),
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
                                       ),
                                       onPressed: _showInOutModal,
                                       child: const Text(
@@ -1837,12 +2026,15 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                         ),
                       ),
                     ),
-                  
+
                   // ✅ EXPANSIONTILE (como en v1)
                   ExpansionTile(
                     key: ValueKey('history_${_selectedDate.toIso8601String()}'),
                     initiallyExpanded: false,
-                    tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    tilePadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 0,
+                    ),
                     dense: true,
                     visualDensity: VisualDensity.compact,
                     leading: const Icon(Icons.history, size: 18),
@@ -1874,7 +2066,9 @@ Future<void> _showVariantDialog(FoodGroupDisplay group) async {
                       Container(
                         constraints: const BoxConstraints(maxHeight: 200),
                         child: ListView.builder(
-                          key: ValueKey('list_${_history.length}_${_history.hashCode}'),
+                          key: ValueKey(
+                            'list_${_history.length}_${_history.hashCode}',
+                          ),
                           shrinkWrap: true,
                           itemCount: _history.length,
                           itemBuilder: (context, index) {
