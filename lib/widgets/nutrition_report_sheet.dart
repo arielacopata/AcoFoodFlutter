@@ -1144,6 +1144,60 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
         analysisRow++;
       }
 
+      // ========================================
+      // ⭐ HOJA 4: % Distribución Macros (para gráfico de áreas apiladas)
+      // ========================================
+      final percentSheet = excel['% Distribución Macros'];
+
+      // Headers
+      percentSheet.cell(CellIndex.indexByString('A1')).value = TextCellValue(
+        'Fecha',
+      );
+      percentSheet.cell(CellIndex.indexByString('B1')).value = TextCellValue(
+        '% Proteínas',
+      );
+      percentSheet.cell(CellIndex.indexByString('C1')).value = TextCellValue(
+        '% Carbohidratos',
+      );
+      percentSheet.cell(CellIndex.indexByString('D1')).value = TextCellValue(
+        '% Grasas',
+      );
+
+      // Datos
+      int percentRow = 2;
+      for (final report in reports) {
+        final date = report['date'] as DateTime;
+        final nutritionReport = report['report'] as NutritionReport;
+
+        // Calcular % de calorías de cada macro
+        final proteinCals = nutritionReport.proteins * 4; // 4 cal/g
+        final carbsCals = nutritionReport.carbohydrates * 4; // 4 cal/g
+        final fatCals = nutritionReport.totalFats * 9; // 9 cal/g
+        final totalCals = proteinCals + carbsCals + fatCals;
+
+        double proteinPercent = 0;
+        double carbsPercent = 0;
+        double fatPercent = 0;
+
+        if (totalCals > 0) {
+          proteinPercent = (proteinCals / totalCals) * 100;
+          carbsPercent = (carbsCals / totalCals) * 100;
+          fatPercent = (fatCals / totalCals) * 100;
+        }
+
+        // Escribir datos
+        percentSheet.cell(CellIndex.indexByString('A$percentRow')).value =
+            TextCellValue(DateFormat('dd/MM/yyyy').format(date));
+        percentSheet.cell(CellIndex.indexByString('B$percentRow')).value =
+            DoubleCellValue(proteinPercent);
+        percentSheet.cell(CellIndex.indexByString('C$percentRow')).value =
+            DoubleCellValue(carbsPercent);
+        percentSheet.cell(CellIndex.indexByString('D$percentRow')).value =
+            DoubleCellValue(fatPercent);
+
+        percentRow++;
+      }
+
       // 🗑️ Eliminar hoja Sheet1 vacía (si existe)
       try {
         excel.delete('Sheet1');
@@ -1175,7 +1229,7 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Excel generado exitosamente (3 hojas)'),
+            content: Text('✅ Excel generado exitosamente (4 hojas)'),
             duration: Duration(seconds: 2),
           ),
         );

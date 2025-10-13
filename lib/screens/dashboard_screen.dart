@@ -24,35 +24,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadStats();
   }
 
+  // 🔧 FIX: Pedir 1 día extra al backend para compensar el filtro de HOY
+
+  // En dashboard_screen.dart, REEMPLAZA la función _loadStats() completa:
+
+  // 🔧 FIX CORRECTO: Volver a Duration(days: 7)
+
+  // En dashboard_screen.dart, función _loadStats()
+  // CAMBIAR de Duration(days: 8) a Duration(days: 7)
+
   Future<void> _loadStats() async {
     setState(() => _loading = true);
 
+    // ⭐ Normalizar "now" a medianoche de hoy
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
     DateTime startDate;
 
     switch (_selectedPeriod) {
       case '7days':
-        startDate = now.subtract(const Duration(days: 7));
+        startDate = today.subtract(const Duration(days: 7));
         break;
       case '30days':
-        startDate = now.subtract(const Duration(days: 30));
+        startDate = today.subtract(const Duration(days: 30));
         break;
       case '90days':
-        startDate = now.subtract(const Duration(days: 90));
+        startDate = today.subtract(const Duration(days: 90));
         break;
       default:
-        startDate = now.subtract(const Duration(days: 7));
+        startDate = today.subtract(const Duration(days: 7));
     }
 
     final stats = await DatabaseService.instance.getDashboardStats(
       startDate,
-      now,
+      today, // ⭐ Pasar "today" (medianoche) en lugar de "now"
     );
 
     setState(() {
       _stats = stats;
       _loading = false;
     });
+  }
+
+  Map<String, double> _getFilteredAverages() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Filtrar días (igual que en el gráfico)
+    final filteredData = _stats!.dailyData.where((day) {
+      final dayDate = DateTime(day.date.year, day.date.month, day.date.day);
+      return dayDate.isBefore(today);
+    }).toList();
+
+    if (filteredData.isEmpty) {
+      return {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0};
+    }
+
+    double totalCalories = 0;
+    double totalProtein = 0;
+    double totalCarbs = 0;
+    double totalFat = 0;
+
+    for (var day in filteredData) {
+      totalCalories += day.calories;
+      totalProtein += day.protein;
+      totalCarbs += day.carbs;
+      totalFat += day.fat;
+    }
+
+    final count = filteredData.length;
+
+    return {
+      'calories': totalCalories / count,
+      'protein': totalProtein / count,
+      'carbs': totalCarbs / count,
+      'fat': totalFat / count,
+    };
   }
 
   @override
@@ -91,6 +139,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   const SizedBox(height: 16),
 
+                  _buildMacrosPercentChart(),
+
+                  const SizedBox(height: 16),
+
                   _buildTopFoods(),
 
                   const SizedBox(height: 16),
@@ -103,6 +155,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMacrosCard() {
+    final averages = _getFilteredAverages();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -119,28 +172,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 _buildMacroItem(
                   'Calorías',
-                  _stats!.avgCalories.toStringAsFixed(0),
+                  averages['calories']!.toStringAsFixed(0),
                   'kcal',
                   Colors.orange,
                   'calories',
                 ),
                 _buildMacroItem(
                   'Proteínas',
-                  _stats!.avgProtein.toStringAsFixed(1),
+                  averages['protein']!.toStringAsFixed(1),
                   'g',
                   Colors.red,
                   'protein',
                 ),
                 _buildMacroItem(
                   'Carbos',
-                  _stats!.avgCarbs.toStringAsFixed(1),
+                  averages['carbs']!.toStringAsFixed(1),
                   'g',
                   Colors.blue,
                   'carbs',
                 ),
                 _buildMacroItem(
                   'Grasas',
-                  _stats!.avgFat.toStringAsFixed(1),
+                  averages['fat']!.toStringAsFixed(1),
                   'g',
                   Colors.green,
                   'fat',
@@ -287,34 +340,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  // 🔍 CÓDIGO DE DEBUG - Agregar a _getChartSpots()
+
+  // REEMPLAZA tu función _getChartSpots() COMPLETA con esto:
+
   List<FlSpot> _getChartSpots() {
-    // Filtrar el día actual (hoy) porque los datos están incompletos
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
+    // Filtrar días válidos (antes de hoy)
     final filteredData = _stats!.dailyData.where((day) {
       final dayDate = DateTime(day.date.year, day.date.month, day.date.day);
-      return dayDate.isBefore(today); // Solo días anteriores a hoy
+      return dayDate.isBefore(today);
     }).toList();
 
-    return filteredData.asMap().entries.map((entry) {
+    // Ordenar cronológicamente (del más antiguo al más reciente)
+    filteredData.sort((a, b) => a.date.compareTo(b.date));
+
+    final spots = <FlSpot>[];
+    for (var i = 0; i < filteredData.length; i++) {
+      final day = filteredData[i];
+
       double value;
       switch (_selectedMacro) {
         case 'protein':
-          value = entry.value.protein;
+          value = day.protein;
           break;
         case 'carbs':
-          value = entry.value.carbs;
+          value = day.carbs;
           break;
         case 'fat':
-          value = entry.value.fat;
+          value = day.fat;
           break;
         default:
-          value = entry.value.calories;
+          value = day.calories;
       }
 
-      return FlSpot(entry.key.toDouble(), value);
-    }).toList();
+      spots.add(FlSpot(i.toDouble(), value.roundToDouble()));
+    }
+
+    return spots;
   }
 
   // ⭐ NUEVAS FUNCIONES - Calcular min/max con padding 20/20
@@ -452,6 +517,199 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMacrosPercentChart() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final filteredData = _stats!.dailyData.where((day) {
+      final dayDate = DateTime(day.date.year, day.date.month, day.date.day);
+      return dayDate.isBefore(today);
+    }).toList();
+
+    if (filteredData.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text('No hay datos históricos para mostrar'),
+        ),
+      );
+    }
+
+    // Calcular puntos apilados
+    final proteinSpots = _getMacroSpots(filteredData, 'protein');
+    final carbsSpots = _getMacroSpots(filteredData, 'carbs');
+    final fatSpots = _getMacroSpots(filteredData, 'fat');
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Distribución porcentual de macronutrientes',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: true),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: true),
+                  minY: 0,
+                  maxY: 100,
+                  lineTouchData: LineTouchData(
+                    enabled: true,
+                    touchTooltipData: LineTouchTooltipData(
+                      tooltipRoundedRadius: 6,
+                      tooltipPadding: const EdgeInsets.all(8),
+                      getTooltipItems: (spots) {
+                        if (spots.isEmpty) return [];
+                        final index = spots.first.x.toInt();
+                        if (index < 0 || index >= filteredData.length)
+                          return [];
+
+                        final day = filteredData[index];
+                        final proteinCals = day.protein * 4;
+                        final carbsCals = day.carbs * 4;
+                        final fatCals = day.fat * 9;
+                        final totalCals = proteinCals + carbsCals + fatCals;
+
+                        final proteinPercent = totalCals > 0
+                            ? (proteinCals / totalCals) * 100
+                            : 0;
+                        final carbsPercent = totalCals > 0
+                            ? (carbsCals / totalCals) * 100
+                            : 0;
+                        final fatPercent = totalCals > 0
+                            ? (fatCals / totalCals) * 100
+                            : 0;
+
+                        return [
+                          LineTooltipItem(
+                            'Proteínas: ${proteinPercent.toStringAsFixed(1)}%\n'
+                            'Carbohidratos: ${carbsPercent.toStringAsFixed(1)}%\n'
+                            'Grasas: ${fatPercent.toStringAsFixed(1)}%',
+                            const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ];
+                      },
+                    ),
+                  ),
+                  betweenBarsData: [
+                    BetweenBarsData(
+                      fromIndex: 0,
+                      toIndex: 1,
+                      color: Colors.blue.withOpacity(0.5),
+                    ),
+                    BetweenBarsData(
+                      fromIndex: 1,
+                      toIndex: 2,
+                      color: Colors.green.withOpacity(0.5),
+                    ),
+                  ],
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: proteinSpots,
+                      isCurved: true,
+                      color: Colors.orange,
+                      barWidth: 1.5,
+                      dotData: const FlDotData(show: false),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: Colors.orange.withOpacity(0.5),
+                      ),
+                    ),
+                    LineChartBarData(
+                      spots: carbsSpots,
+                      isCurved: true,
+                      color: Colors.blue,
+                      barWidth: 1.5,
+                      dotData: const FlDotData(show: false),
+                    ),
+                    LineChartBarData(
+                      spots: fatSpots,
+                      isCurved: true,
+                      color: Colors.green,
+                      barWidth: 1.5,
+                      dotData: const FlDotData(show: false),
+                    ),
+                  ],
+                ),
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.easeOutCubic,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLegendItem('Proteínas', Colors.orange),
+                const SizedBox(width: 16),
+                _buildLegendItem('Carbohidratos', Colors.blue),
+                const SizedBox(width: 16),
+                _buildLegendItem('Grasas', Colors.green),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 🔹 Genera puntos acumulativos por macro
+  List<FlSpot> _getMacroSpots(List<dynamic> data, String macroType) {
+    return data.asMap().entries.map((entry) {
+      final day = entry.value;
+      final proteinCals = day.protein * 4;
+      final carbsCals = day.carbs * 4;
+      final fatCals = day.fat * 9;
+      final totalCals = proteinCals + carbsCals + fatCals;
+
+      double value = 0;
+      if (totalCals > 0) {
+        final proteinPercent = (proteinCals / totalCals) * 100;
+        final carbsPercent = (carbsCals / totalCals) * 100;
+        final fatPercent = (fatCals / totalCals) * 100;
+
+        if (macroType == 'protein') {
+          value = proteinPercent;
+        } else if (macroType == 'carbs') {
+          value = proteinPercent + carbsPercent;
+        } else if (macroType == 'fat') {
+          value = proteinPercent + carbsPercent + fatPercent;
+        }
+      }
+
+      return FlSpot(entry.key.toDouble(), value);
+    }).toList();
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.5),
+            border: Border.all(color: color, width: 2),
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
     );
   }
 }

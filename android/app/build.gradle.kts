@@ -31,8 +31,8 @@ android {
         applicationId = "com.arielaco.acofood"
         minSdk = flutter.minSdkVersion
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.0.6"
+        versionCode = 9
+        versionName = "1.1.0"
     }
 
 signingConfigs {
