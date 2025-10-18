@@ -35,6 +35,7 @@ import 'package:file_picker/file_picker.dart';
 import 'services/import_service.dart';
 import 'models/recipe.dart';
 import 'dart:io';
+import 'services/firestore_storage_service.dart';
 
 final StreamController<double> _weightController = StreamController.broadcast();
 bool _isScaleConnected = false;
@@ -134,7 +135,7 @@ class _HomePageState extends State<HomePage> {
       );
 
       await StorageFactory.instance.createEntry(entry);
-      _loadHistory();
+      await _loadHistory();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -753,13 +754,17 @@ class _HomePageState extends State<HomePage> {
     if (newGrams != null && newGrams > 0) {
       final updatedEntry = FoodEntry(
         id: entry.id,
+        firestoreDocId: entry.firestoreDocId, 
         food: entry.food,
         grams: newGrams,
         timestamp: entry.timestamp,
       );
-
+      print('📝 Editando entry...');
       await StorageFactory.instance.updateEntry(updatedEntry);
-      _loadHistory();
+      print('✅ Entry actualizado');
+      await _loadHistory();
+      print('🔄 Historial recargado. Entries: ${_history.length}');
+      setState(() {}); 
 
       ScaffoldMessenger.of(
         context,
@@ -787,23 +792,29 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (confirmed == true) {
-      await StorageFactory.instance.deleteEntry(entry.id!);
-      _loadHistory();
-
+      if (entry.firestoreDocId != null) {
+    // Web - usar Firestore
+    final service = StorageFactory.instance as FirestoreStorageService;
+      await service.deleteEntryByDocId(entry.firestoreDocId!);
+        } else {
+          // Android - usar SQLite
+          await StorageFactory.instance.deleteEntry(entry.id!);
+        }
+        await _loadHistory();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Registro eliminado')));
     }
   }
 
-  void _previousDay() {
+Future<void> _previousDay() async { 
     setState(() {
       _selectedDate = _selectedDate.subtract(const Duration(days: 1));
     });
-    _loadHistory();
+    await _loadHistory();
   }
 
-  void _nextDay() {
+Future<void> _nextDay() async { 
     final tomorrow = _selectedDate.add(const Duration(days: 1));
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -819,7 +830,7 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _selectedDate = tomorrow;
       });
-      _loadHistory();
+      await _loadHistory();
     }
   }
 
@@ -849,7 +860,7 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _history = entries;
     });
-    _recalculateTotals();
+    await _recalculateTotals();
   }
 
   void _buildDisplayGroups() {
@@ -1359,7 +1370,10 @@ class _HomePageState extends State<HomePage> {
     });
 
     _setTare();
-    _loadHistory();
+    print('🔄 Recargando historial...');
+    await _loadHistory();
+    print('✅ Historial recargado. Entries: ${_history.length}');
+    setState(() {});
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1660,12 +1674,12 @@ class _HomePageState extends State<HomePage> {
             widget.onUpdateProfile(newProfile);
             setState(() {});
           },
-          onHistoryChanged: () {
-            _loadHistory();
+          onHistoryChanged: () async {
+            await _loadHistory();
           },
           onOpenImportExport: _showInOutModal,
-          onRecipeUsed: () {
-            _loadHistory();
+          onRecipeUsed: () async {
+            await _loadHistory();
             _setTare();
           },
           onSortOrderChanged: (newOrder) async {

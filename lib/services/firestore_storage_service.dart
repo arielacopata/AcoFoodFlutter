@@ -56,7 +56,7 @@ class FirestoreStorageService implements StorageService {
           });
 
       return FoodEntry(
-        id: docRef.id.hashCode, // Firestore usa strings, convertimos a int
+        firestoreDocId: docRef.id, // 👈 Usar firestoreDocId
         food: entry.food,
         grams: entry.grams,
         timestamp: entry.timestamp,
@@ -107,7 +107,7 @@ class FirestoreStorageService implements StorageService {
         if (food != null) {
           entries.add(
             FoodEntry(
-              id: doc.id.hashCode,
+              firestoreDocId: doc.id,
               food: food,
               grams: (data['grams'] as num).toDouble(),
               timestamp: DateTime.parse(data['timestamp']),
@@ -131,106 +131,222 @@ class FirestoreStorageService implements StorageService {
     return {};
   }
 
+@override
+Future<int> updateEntry(FoodEntry entry) async {
+  try {
+    if (entry.firestoreDocId == null) {
+      print('Error: No firestoreDocId to update');
+      return 0;
+    }
+    
+    await _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('data')
+        .doc('entries')
+        .collection('history')
+        .doc(entry.firestoreDocId)
+        .update({
+      'grams': entry.grams,
+      'timestamp': entry.timestamp.toIso8601String(),
+    });
+    
+    return 1;
+  } catch (e) {
+    print('Error updating entry: $e');
+    return 0;
+  }
+}
+
+@override
+Future<int> deleteEntry(int id) async {
+  // Este método recibe el objeto completo en realidad
+  // Necesitamos cambiar la firma o buscar de otra forma
+  throw UnimplementedError('Use deleteEntryByDocId instead');
+}
+
+// Agregar método nuevo
+Future<int> deleteEntryByDocId(String docId) async {
+  try {
+    await _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('data')
+        .doc('entries')
+        .collection('history')
+        .doc(docId)
+        .delete();
+    return 1;
+  } catch (e) {
+    print('Error deleting entry: $e');
+    return 0;
+  }
+}
+
+@override
+Future<void> clearTodayHistory() async {
+  try {
+    final today = DateTime.now();
+    final entries = await getEntriesByDate(today);
+    
+    for (var entry in entries) {
+      if (entry.firestoreDocId != null) {
+        await deleteEntryByDocId(entry.firestoreDocId!);
+      }
+    }
+  } catch (e) {
+    print('Error clearing history: $e');
+  }
+}
+
+@override
+Future<int> saveUserProfile(UserProfile profile) async {
+  try {
+    
+    await _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('data')
+        .doc('profile')
+        .set(profile.toMap());
+    
+    return 1;
+  } catch (e) {
+    return 0;
+  }
+}
+@override
+Future<UserProfile?> getUserProfile() async {
+  try {
+    print('🔍 Buscando perfil para userId: $_userId');
+    
+    final doc = await _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('data')
+        .doc('profile')
+        .get();
+    
+    print('📄 Documento existe: ${doc.exists}');
+    
+    if (doc.exists) {
+      print('📊 Datos del documento: ${doc.data()}');
+      return UserProfile.fromMap(doc.data()!);
+    }
+    return null;
+  } catch (e) {
+    print('❌ Error getting user profile: $e');
+    return null;
+  }
+}
+
+@override
+Future<void> deleteUserProfile() async {
+  try {
+    await _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('data')
+        .doc('profile')
+        .delete();
+  } catch (e) {
+    print('Error deleting profile: $e');
+  }
+}
+
+@override
+Future<void> updateExpenditureForToday(int calories) async {
+  try {
+    final today = DateTime.now();
+    final dateStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    
+    await _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('data')
+        .doc('profile')
+        .update({
+      'expenditure_$dateStr': calories,
+    });
+  } catch (e) {
+    print('Error updating expenditure: $e');
+  }
+}
+
+@override
+Future<void> incrementFoodUsage(int foodId) async {
+  // Por ahora no implementamos contadores de uso en web
+  // Se puede implementar después si es necesario
+  return;
+}
   @override
-  Future<int> updateEntry(FoodEntry entry) {
-    throw UnimplementedError();
+  Future<void> logHabit(int habitId, String detail) async {
+ // TODO: Implementar hábitos en Firestore
   }
 
   @override
-  Future<int> deleteEntry(int id) {
-    throw UnimplementedError();
+  Future<List<HabitLog>> getHabitLogsByDate(int habitId, DateTime date) async {
+  return [];
   }
 
   @override
-  Future<void> clearTodayHistory() {
-    throw UnimplementedError();
+  Future<int> calculateStreak(int habitId) async {
+  return 0;
   }
 
   @override
-  Future<int> saveUserProfile(UserProfile profile) {
-    throw UnimplementedError();
+  Future<List<Habit>> getAllHabits() async {
+  return [];
   }
 
   @override
-  Future<UserProfile?> getUserProfile() {
-    throw UnimplementedError();
+  Future<List<Habit>> getEnabledHabits() async  {
+  return [];
   }
 
   @override
-  Future<void> deleteUserProfile() {
-    throw UnimplementedError();
+  Future<void> updateHabitEnabled(int habitId, bool enabled) async {
+  // TODO: Implementar
   }
 
   @override
-  Future<void> updateExpenditureForToday(int calories) {
-    throw UnimplementedError();
+  Future<int> saveRecipe(Recipe recipe, List<RecipeIngredient> ingredients) async {
+  return 0; // TODO: Implementar recetas
   }
 
   @override
-  Future<void> incrementFoodUsage(int foodId) {
-    throw UnimplementedError();
+  Future<List<Recipe>> getAllRecipes() async {
+  return [];
   }
 
   @override
-  Future<void> logHabit(int habitId, String detail) {
-    throw UnimplementedError();
+  Future<List<RecipeIngredient>> getRecipeIngredients(int recipeId) async {
+  return [];
   }
 
   @override
-  Future<List<HabitLog>> getHabitLogsByDate(int habitId, DateTime date) {
-    throw UnimplementedError();
+  Future<void> registerRecipeIngredients(int recipeId) async {
+  // TODO: Implementar
   }
 
   @override
-  Future<int> calculateStreak(int habitId) {
-    throw UnimplementedError();
+  Future<void> deleteRecipe(int recipeId) async {
+  // TODO: Implementar
   }
 
-  @override
-  Future<List<Habit>> getAllHabits() {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<List<Habit>> getEnabledHabits() {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> updateHabitEnabled(int habitId, bool enabled) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<int> saveRecipe(Recipe recipe, List<RecipeIngredient> ingredients) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<List<Recipe>> getAllRecipes() {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<List<RecipeIngredient>> getRecipeIngredients(int recipeId) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> registerRecipeIngredients(int recipeId) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> deleteRecipe(int recipeId) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<DashboardStats> getDashboardStats(
-    DateTime startDate,
-    DateTime endDate,
-  ) {
-    throw UnimplementedError();
-  }
+@override
+Future<DashboardStats> getDashboardStats(DateTime startDate, DateTime endDate) async {
+  // Retornar stats vacíos por ahora
+  return DashboardStats(
+    startDate: startDate,
+    endDate: endDate,
+    avgCalories: 0,
+    avgProtein: 0,
+    avgCarbs: 0,
+    avgFat: 0,
+    dailyData: [],
+    topFoods: [],
+    habitCompletion: {},
+  );
+}
 }

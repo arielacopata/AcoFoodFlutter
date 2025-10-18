@@ -42,11 +42,14 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
   // final PreferencesService _prefsService = PreferencesService();
   final bool _isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
+
+@override
+void initState() {
+  super.initState();
+  if (!kIsWeb) {
+    _loadProfile(); // Solo móvil
   }
+}
 
   // CAMBIO: Carga desde DatabaseService (SQLite)
   Future<void> _loadProfile() async {
@@ -61,16 +64,13 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
           profile = defaultProfile;
         });
 
-        print("DEBUG: Perfil por defecto creado");
       } else {
         setState(() {
           profile = loaded;
         });
 
-        print("DEBUG: Perfil cargado: ${loaded.name}");
       }
     } catch (e, st) {
-      print("ERROR en _loadProfile: $e");
       print(st);
       setState(() {
         profile = UserProfile(id: 1, name: "Error");
@@ -94,64 +94,77 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Pantalla de carga mientras profile es null
-    if (profile == null) {
-      return const MaterialApp(
-        localizationsDelegates: [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: [Locale('es', 'ES')],
-        locale: Locale('es', 'ES'),
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
-        debugShowCheckedModeBanner: false,
-      );
-    }
-
-    return MaterialApp(
-      title: "AcoFood",
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: _themeMode,
-      localizationsDelegates: const [
+@override
+Widget build(BuildContext context) {
+  // Solo en móvil esperar a que cargue profile
+  if (!kIsWeb && profile == null) {
+    return const MaterialApp(
+      localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('es', 'ES')],
-      locale: const Locale('es', 'ES'),
-      home: kIsWeb ? _buildWebHome() : _buildMobileHome(),
+      supportedLocales: [Locale('es', 'ES')],
+      locale: Locale('es', 'ES'),
+      home: Scaffold(body: Center(child: CircularProgressIndicator())),
+      debugShowCheckedModeBanner: false,
     );
   }
+  
+  return MaterialApp(
+    title: "AcoFood",
+    debugShowCheckedModeBanner: false,
+    theme: ThemeData.light(),
+    darkTheme: ThemeData.dark(),
+    themeMode: _themeMode,
+    localizationsDelegates: const [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: const [Locale('es', 'ES')],
+    locale: const Locale('es', 'ES'),
+    home: kIsWeb ? _buildWebHome() : _buildMobileHome(),
+  );
+}
 
-  Widget _buildWebHome() {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasData) {
-          // Usuario autenticado en web
-          return HomePage(
-            profile: profile!,
-            onUpdateProfile: _saveProfile,
-            onToggleTheme: _toggleTheme,
-          );
-        }
-
-        // No autenticado, mostrar login
-        return const LoginScreen();
-      },
-    );
-  }
+Widget _buildWebHome() {
+  return StreamBuilder<User?>(
+    stream: FirebaseAuth.instance.authStateChanges(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        );
+      }
+      
+      if (snapshot.hasData) {
+        // Usuario autenticado, cargar perfil de Firestore
+        return FutureBuilder<UserProfile?>(
+          future: StorageFactory.instance.getUserProfile(),
+          builder: (context, profileSnapshot) {
+            if (profileSnapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+            
+            // Usar perfil de Firestore o crear uno nuevo
+            final firebaseProfile = profileSnapshot.data ?? UserProfile(id: 1, name: "Usuario");
+            
+            return HomePage(
+              profile: firebaseProfile,
+              onUpdateProfile: _saveProfile,
+              onToggleTheme: _toggleTheme,
+            );
+          },
+        );
+      }
+      
+      return const LoginScreen();
+    },
+  );
+}
 
   Widget _buildMobileHome() {
     // En móvil va directo a la app
