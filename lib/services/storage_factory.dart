@@ -10,8 +10,10 @@ class StorageFactory {
   static StorageService get instance {
     if (_instance == null) {
       if (kIsWeb) {
+        print('🌐 Usando FirestoreStorageService'); // Debug
         _instance = FirestoreStorageService();
       } else {
+        print('📱 Usando SQLiteStorageService'); // Debug
         _instance = SQLiteStorageService();
       }
     }

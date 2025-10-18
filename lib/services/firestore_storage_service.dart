@@ -8,6 +8,7 @@ import '../models/recipe.dart';
 import '../models/dashboard_stats.dart';
 import 'food_repository.dart';
 import '../data/supplements_data.dart';
+import '../models/food.dart';
 
 class FirestoreStorageService implements StorageService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -38,13 +39,96 @@ class FirestoreStorageService implements StorageService {
   // Por ahora dejamos stubs que tiran error
 
   @override
-  Future<FoodEntry> createEntry(FoodEntry entry) {
-    throw UnimplementedError('Firestore implementation coming soon');
+  Future<FoodEntry> createEntry(FoodEntry entry) async {
+    try {
+      final docRef = await _firestore
+          .collection('users')
+          .doc(_userId)
+          .collection('data')
+          .doc('entries')
+          .collection('history')
+          .add({
+            'foodId': entry.food.id,
+            'grams': entry.grams,
+            'timestamp': entry.timestamp.toIso8601String(),
+            'isSupplement': entry.isSupplement ? 1 : 0,
+            'supplementDose': entry.supplementDose,
+          });
+
+      return FoodEntry(
+        id: docRef.id.hashCode, // Firestore usa strings, convertimos a int
+        food: entry.food,
+        grams: entry.grams,
+        timestamp: entry.timestamp,
+        isSupplement: entry.isSupplement,
+        supplementDose: entry.supplementDose,
+      );
+    } catch (e) {
+      print('Error creating entry: $e');
+      rethrow;
+    }
   }
 
   @override
-  Future<List<FoodEntry>> getEntriesByDate(DateTime date) {
-    throw UnimplementedError();
+  Future<List<FoodEntry>> getEntriesByDate(DateTime date) async {
+    try {
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final snapshot = await _firestore
+          .collection('users')
+          .doc(_userId)
+          .collection('data')
+          .doc('entries')
+          .collection('history')
+          .where(
+            'timestamp',
+            isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
+          )
+          .where('timestamp', isLessThan: endOfDay.toIso8601String())
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      List<FoodEntry> entries = [];
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final foodId = data['foodId'] as int;
+
+        Food? food;
+        if ((data['isSupplement'] ?? 0) == 1) {
+          food = supplementsList.firstWhere(
+            (s) => s.id == foodId,
+            orElse: () => FoodRepository().getFoodById(foodId)!,
+          );
+        } else {
+          food = FoodRepository().getFoodById(foodId);
+        }
+
+        if (food != null) {
+          entries.add(
+            FoodEntry(
+              id: doc.id.hashCode,
+              food: food,
+              grams: (data['grams'] as num).toDouble(),
+              timestamp: DateTime.parse(data['timestamp']),
+              isSupplement: (data['isSupplement'] ?? 0) == 1,
+              supplementDose: data['supplementDose'],
+            ),
+          );
+        }
+      }
+
+      return entries;
+    } catch (e) {
+      print('Error getting entries: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<Map<int, int>> getFoodUsageCounts() async {
+    // Por ahora retornar vacío, lo implementamos después si lo necesitás
+    return {};
   }
 
   @override
@@ -84,11 +168,6 @@ class FirestoreStorageService implements StorageService {
 
   @override
   Future<void> incrementFoodUsage(int foodId) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Map<int, int>> getFoodUsageCounts() {
     throw UnimplementedError();
   }
 
