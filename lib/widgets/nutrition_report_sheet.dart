@@ -47,6 +47,9 @@ const Map<String, String> nutrientNameMapping = {
   'vitaminB12': 'Vitamina B12',
   'vitaminD': 'Vitamina D',
   'iodine': 'Yodo',
+  'molybdenum': 'Molibdeno',  // ← AGREGAR
+  'chromium': 'Cromo',        // ← AGREGAR
+  'fluorine': 'Flúor',        // ← AGREGAR
   'histidine': "Histidina",
   'isoleucine': "Isoleucina",
   'leucine': "Leucina",
@@ -126,6 +129,8 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     'manganese',
     'selenium',
     'iodine',
+    'molybdenum',
+    'chromium',
     'histidine',
     'isoleucine',
     'leucine',
@@ -174,6 +179,9 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     'manganese',
     'selenium',
     'iodine',
+    'molybdenum',
+    'chromium',
+    'fluorine',
   ];
 
   static const List<String> page3Nutrients = [
@@ -432,6 +440,58 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
               ),
               pw.SizedBox(height: 12),
               ..._buildNutrientsList(page3Nutrients),
+              pw.SizedBox(height: 20),
+              _buildSectionTitle('MINERALES TRAZA (AI)'),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                'Ingesta Adecuada (AI), establecida cuando no hay suficiente evidencia para desarrollar un RDA.',
+                style: const pw.TextStyle(
+                  fontSize: 10,
+                  color: PdfColors.grey600,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              ..._buildNutrientsList(page2Nutrients.sublist(18)),
+// Nota sobre el Flúor
+              pw.SizedBox(height: 16),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(8),
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.blue50,
+                  borderRadius: pw.BorderRadius.circular(4),
+                  border: pw.Border.all(color: PdfColors.blue200),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Row(
+                      children: [
+                        pw.Text(
+                          'Nota sobre el Flúor',
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColors.blue900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'Este mineral traza NO es esencial. La IA (3-4 mg) está diseñada para '
+                      'poblaciones con alto consumo de azúcar. En una dieta basada en plantas no se '
+                      'necesita suplementación. El flúor endurece todas las estructuras óseas del '
+                      'cuerpo: favorece a los dientes que no necesitan flexibilidad, pero fragiliza '
+                      'el resto de los huesos. Si quieres huesos fuertes haz ejercicio diario '
+                      '(idealmente de fuerza), no lo conseguirás agregando flúor a tu dieta.',
+                      style: const pw.TextStyle(
+                        fontSize: 9,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           );
         },
@@ -534,64 +594,88 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     );
   }
 
-  // Helper: Lista de nutrientes para PDF
-  List<pw.Widget> _buildNutrientsList(List<String> nutrients) {
-    return nutrients.map((key) {
-      final value = _getNutrientValue(key);
+  // Helper: Lista de nutrientes para PDF v2
+List<pw.Widget> _buildNutrientsList(List<String> nutrients) {
+  return nutrients.map((key) {
+    final value = _getNutrientValue(key);
 
-      Map<String, dynamic>? goalData;
-      if (key == 'proteins') {
+    Map<String, dynamic>? goalData;
+    if (key == 'proteins') {
+      goalData = {
+        'value': widget.proteinGoalGrams,
+        'unit': 'g',
+        'type': 'Meta',
+      };
+    } else if (key == 'carbohydrates') {
+      goalData = {
+        'value': widget.carbsGoalGrams,
+        'unit': 'g',
+        'type': 'Meta',
+      };
+    } else if (key == 'totalFats') {
+      goalData = {'value': widget.fatGoalGrams, 'unit': 'g', 'type': 'Meta'};
+    } else {
+      goalData = nutrientGoals[key];
+      if (goalData != null && goalData['unit'] == 'mg/kg/day') {
+        final mgPerKg = goalData['value'] as double;
+        final totalMg = mgPerKg * widget.userWeight;
+        final totalGrams = totalMg / 1000;
         goalData = {
-          'value': widget.proteinGoalGrams,
+          'value': totalGrams,
           'unit': 'g',
-          'type': 'Meta',
+          'type': goalData['type'],
         };
-      } else if (key == 'carbohydrates') {
-        goalData = {
-          'value': widget.carbsGoalGrams,
-          'unit': 'g',
-          'type': 'Meta',
-        };
-      } else if (key == 'totalFats') {
-        goalData = {'value': widget.fatGoalGrams, 'unit': 'g', 'type': 'Meta'};
-      } else {
-        goalData = nutrientGoals[key];
-        if (goalData != null && goalData['unit'] == 'mg/kg/day') {
-          final mgPerKg = goalData['value'] as double;
-          final totalMg = mgPerKg * widget.userWeight;
-          final totalGrams = totalMg / 1000;
-          goalData = {
-            'value': totalGrams,
-            'unit': 'g',
-            'type': goalData['type'],
-          };
-        }
       }
+    }
 
-      if (goalData == null) return pw.SizedBox.shrink();
+    if (goalData == null) return pw.SizedBox.shrink();
 
-      final name = nutrientNameMapping[key];
-      if (name == null) return pw.SizedBox.shrink();
+    final name = nutrientNameMapping[key];
+    if (name == null) return pw.SizedBox.shrink();
 
-      final goal = goalData['value'] as double;
-      final pct = goal > 0 ? ((value / goal) * 100).round() : 0;
+    final goal = goalData['value'] as double;
+    final pct = goal > 0 ? ((value / goal) * 100).round() : 0;
 
-      return _buildPdfNutrientRow(name, value, goal, goalData['unit'], pct);
-    }).toList();
-  }
+    // ✅ CAMBIO: Ahora pasamos goalData['type'] como sexto parámetro
+    return _buildPdfNutrientRow(
+      name, 
+      value, 
+      goal, 
+      goalData['unit'], 
+      pct,
+      goalData['type'],  // ← NUEVO PARÁMETRO
+    );
+  }).toList();
+}
 
-  // Helper para construir filas de nutrientes en PDF
-  pw.Widget _buildPdfNutrientRow(
-    String name,
-    double value,
-    double goal,
-    String unit,
-    int percentage,
-  ) {
-    final progress = (goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0.0);
 
-    // Determinar color
-    PdfColor barColor;
+  // Helper para construir filas de nutrientes en PDF v2
+pw.Widget _buildPdfNutrientRow(
+  String name,
+  double value,
+  double goal,
+  String unit,
+  int percentage,
+  String type,  // ← NUEVO PARÁMETRO
+) {
+  final progress = (goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0.0);
+
+  // ✅ NUEVA LÓGICA: Distingue entre "Límite" y otros tipos
+  PdfColor barColor;
+  
+  if (type == 'Límite') {
+    // LÓGICA INVERSA para Sodio, Grasas saturadas, etc.
+    // Estar DEBAJO del límite es BUENO
+    if (percentage <= 100) {
+      barColor = PdfColors.green;  // ✅ Cumple con el límite
+    } else if (percentage <= 120) {
+      barColor = PdfColors.orange; // ⚠️ Se pasó un poco
+    } else {
+      barColor = PdfColors.red;    // ❌ Se pasó mucho del límite
+    }
+  } else {
+    // LÓGICA NORMAL para RDA/AI/Meta
+    // Más = Mejor
     if (percentage >= 90) {
       barColor = PdfColors.green;
     } else if (percentage >= 50) {
@@ -599,62 +683,63 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
     } else {
       barColor = PdfColors.red;
     }
+  }
 
-    return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 10),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                name,
-                style: pw.TextStyle(
-                  fontSize: 11,
-                  fontWeight: pw.FontWeight.bold,
-                ),
+  return pw.Container(
+    margin: const pw.EdgeInsets.only(bottom: 10),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              name,
+              style: pw.TextStyle(
+                fontSize: 11,
+                fontWeight: pw.FontWeight.bold,
               ),
-              pw.Text(
-                '${_formatValue(value)} / ${_formatValue(goal)} $unit ($percentage%)',
-                style: const pw.TextStyle(
-                  fontSize: 10,
-                  color: PdfColors.grey700,
-                ),
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 3),
-          pw.Container(
-            height: 6,
-            decoration: pw.BoxDecoration(
-              color: PdfColors.grey300,
-              borderRadius: pw.BorderRadius.circular(3),
             ),
-            child: pw.Row(
-              children: [
-                if (progress > 0)
-                  pw.Expanded(
-                    flex: (progress * 100).round(),
-                    child: pw.Container(
-                      decoration: pw.BoxDecoration(
-                        color: barColor,
-                        borderRadius: pw.BorderRadius.circular(3),
-                      ),
+            pw.Text(
+              '${_formatValue(value)} / ${_formatValue(goal)} $unit ($percentage%)',
+              style: const pw.TextStyle(
+                fontSize: 10,
+                color: PdfColors.grey700,
+              ),
+            ),
+          ],
+        ),
+        pw.SizedBox(height: 3),
+        pw.Container(
+          height: 6,
+          decoration: pw.BoxDecoration(
+            color: PdfColors.grey300,
+            borderRadius: pw.BorderRadius.circular(3),
+          ),
+          child: pw.Row(
+            children: [
+              if (progress > 0)
+                pw.Expanded(
+                  flex: (progress * 100).round(),
+                  child: pw.Container(
+                    decoration: pw.BoxDecoration(
+                      color: barColor,  // ← Ahora usa la lógica correcta
+                      borderRadius: pw.BorderRadius.circular(3),
                     ),
                   ),
-                if (progress < 1.0)
-                  pw.Expanded(
-                    flex: ((1 - progress) * 100).round(),
-                    child: pw.Container(),
-                  ),
-              ],
-            ),
+                ),
+              if (progress < 1.0)
+                pw.Expanded(
+                  flex: ((1 - progress) * 100).round(),
+                  child: pw.Container(),
+                ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   // Mostrar selector de rango de fechas
   Future<void> _showDateRangePicker(BuildContext context) async {
@@ -1317,6 +1402,12 @@ class _NutritionReportSheetState extends State<NutritionReportSheet> {
         return report.vitaminD;
       case 'iodine':
         return report.iodine;
+      case 'molybdenum':
+        return widget.report.molybdenum;
+      case 'chromium':
+        return widget.report.chromium;
+      case 'fluorine':
+        return widget.report.fluorine;
       case 'histidine':
         return report.histidine;
       case 'isoleucine':

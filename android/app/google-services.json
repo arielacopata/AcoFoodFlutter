@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "76992454549",
+    "project_id": "acofood-app",
+    "storage_bucket": "acofood-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:76992454549:android:94e8525974972a6533609c",
+        "android_client_info": {
+          "package_name": "com.arielaco.acofood"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "76992454549-8vluqskmcom272njj00jpvjlsirdcj33.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDD0JquYntFYutHh-9IxRQXmkXb32jdliA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "76992454549-8vluqskmcom272njj00jpvjlsirdcj33.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

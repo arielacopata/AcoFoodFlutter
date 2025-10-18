@@ -2,15 +2,21 @@ import 'package:flutter/material.dart';
 import 'models/user_profile.dart';
 import 'home_page.dart';
 import 'services/food_repository.dart'; // <-- 1. Importa el repositorio
-import 'services/database_service.dart';
+import 'services/storage_factory.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'screens/login_screen.dart';
 
 void main() async {
-  // <-- 2. Conviértelo en async
-  // Asegúrate de que los bindings de Flutter estén inicializados
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 👇 AGREGAR ESTAS 3 LÍNEAS
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -18,7 +24,6 @@ void main() async {
   ]);
 
   await initializeDateFormatting('es', null);
-  // <-- 3. Carga los alimentos antes de correr la app
   await FoodRepository().loadFoods();
 
   runApp(const AcoFoodApp());
@@ -46,11 +51,11 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
   // CAMBIO: Carga desde DatabaseService (SQLite)
   Future<void> _loadProfile() async {
     try {
-      final loaded = await DatabaseService.instance.getUserProfile();
+      final loaded = await StorageFactory.instance.getUserProfile();
 
       if (loaded == null) {
         final defaultProfile = UserProfile(id: 1, name: "Default");
-        await DatabaseService.instance.saveUserProfile(defaultProfile);
+        await StorageFactory.instance.saveUserProfile(defaultProfile);
 
         setState(() {
           profile = defaultProfile;
@@ -75,7 +80,7 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
 
   // CAMBIO: Guarda en DatabaseService (SQLite)
   Future<void> _saveProfile(UserProfile newProfile) async {
-    await DatabaseService.instance.saveUserProfile(newProfile);
+    await StorageFactory.instance.saveUserProfile(newProfile);
     setState(() {
       profile = newProfile;
     });
@@ -91,38 +96,69 @@ class _AcoFoodAppState extends State<AcoFoodApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Mientras 'profile' es null, podrías mostrar una pantalla de carga
+    // Pantalla de carga mientras profile es null
     if (profile == null) {
-  return const MaterialApp(
-    localizationsDelegates: [
-      GlobalMaterialLocalizations.delegate,
-      GlobalWidgetsLocalizations.delegate,
-      GlobalCupertinoLocalizations.delegate,
-    ],
-    supportedLocales: [Locale('es', 'ES')],
-    locale: Locale('es', 'ES'),
-    home: Scaffold(body: Center(child: CircularProgressIndicator())),
-    debugShowCheckedModeBanner: false,
-  );
-}
-return MaterialApp(
-  title: "AcoFood",
-  debugShowCheckedModeBanner: false,
-  theme: ThemeData.light(),
-  darkTheme: ThemeData.dark(),
-  themeMode: _themeMode,
-  localizationsDelegates: const [
-    GlobalMaterialLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-  ],
-  supportedLocales: const [Locale('es', 'ES')],
-  locale: const Locale('es', 'ES'),
-  home: HomePage(
-    profile: profile!,
-    onUpdateProfile: _saveProfile,
-    onToggleTheme: _toggleTheme,
-  ),
-);
+      return const MaterialApp(
+        localizationsDelegates: [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: [Locale('es', 'ES')],
+        locale: Locale('es', 'ES'),
+        home: Scaffold(body: Center(child: CircularProgressIndicator())),
+        debugShowCheckedModeBanner: false,
+      );
+    }
+
+    return MaterialApp(
+      title: "AcoFood",
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: _themeMode,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('es', 'ES')],
+      locale: const Locale('es', 'ES'),
+      home: kIsWeb ? _buildWebHome() : _buildMobileHome(),
+    );
+  }
+
+  Widget _buildWebHome() {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasData) {
+          // Usuario autenticado en web
+          return HomePage(
+            profile: profile!,
+            onUpdateProfile: _saveProfile,
+            onToggleTheme: _toggleTheme,
+          );
+        }
+
+        // No autenticado, mostrar login
+        return const LoginScreen();
+      },
+    );
+  }
+
+  Widget _buildMobileHome() {
+    // En móvil va directo a la app
+    return HomePage(
+      profile: profile!,
+      onUpdateProfile: _saveProfile,
+      onToggleTheme: _toggleTheme,
+    );
   }
 }

@@ -48,6 +48,9 @@ class NutritionCalculator {
     _addToTotal(totals, 'manganese', food.manganese * scale);
     _addToTotal(totals, 'selenium', food.selenium * scale);
     _addToTotal(totals, 'iodine', food.iodine * scale);
+    _addToTotal(totals, 'molybdenum', food.molybdenum * scale);  // ← AGREGAR
+    _addToTotal(totals, 'chromium', food.chromium * scale);      // ← AGREGAR
+    _addToTotal(totals, 'fluorine', food.fluorine * scale);      // ← AGREGAR
     _addToTotal(totals, 'vitaminA', food.vitaminA * scale);
     _addToTotal(totals, 'vitaminC', food.vitaminC * scale);
     _addToTotal(totals, 'vitaminD', food.vitaminD * scale);

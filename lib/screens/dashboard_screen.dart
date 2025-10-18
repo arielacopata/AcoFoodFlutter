@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/dashboard_stats.dart';
-import '../services/database_service.dart';
+import '../services/storage_factory.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:math';
 import 'package:pdf/pdf.dart';
@@ -62,7 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         startDate = today.subtract(const Duration(days: 7));
     }
 
-    final stats = await DatabaseService.instance.getDashboardStats(
+    final stats = await StorageFactory.instance.getDashboardStats(
       startDate,
       today, // ⭐ Pasar "today" (medianoche) en lugar de "now"
     );
@@ -113,15 +113,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-  title: const Text('Dashboard'),
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.picture_as_pdf),
-      tooltip: 'Exportar a PDF',
-      onPressed: _loading ? null : _exportDashboardToPdf,
-    ),
-  ],
-),
+        title: const Text('Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'Exportar a PDF',
+            onPressed: _loading ? null : _exportDashboardToPdf,
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -709,226 +709,216 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
   }
 
-Future<void> _exportDashboardToPdf() async {
-  try {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
+  Future<void> _exportDashboardToPdf() async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
 
-    final pdf = pw.Document();
-    
-    // Calcular promedios filtrados
-    final averages = _getFilteredAverages();
-    
-    // Información del período
-    String periodText;
-    switch (_selectedPeriod) {
-      case '7days':
-        periodText = '7 días';
-        break;
-      case '30days':
-        periodText = '30 días';
-        break;
-      case '90days':
-        periodText = '90 días';
-        break;
-      default:
-        periodText = '7 días';
-    }
-    
-    final dateRange = '${DateFormat('dd/MM/yyyy').format(_stats!.startDate)} - ${DateFormat('dd/MM/yyyy').format(_stats!.endDate)}';
-    
-    // Obtener datos filtrados
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final filteredData = _stats!.dailyData.where((day) {
-      final dayDate = DateTime(day.date.year, day.date.month, day.date.day);
-      return dayDate.isBefore(today);
-    }).toList();
-    filteredData.sort((a, b) => a.date.compareTo(b.date));
+      final pdf = pw.Document();
 
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(20),
-        build: (pw.Context context) {
-          return [
-            // ========================================
-            // HEADER
-            // ========================================
-            pw.Container(
-              padding: const pw.EdgeInsets.only(bottom: 20),
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 2),
+      // Calcular promedios filtrados
+      final averages = _getFilteredAverages();
+
+      // Información del período
+      String periodText;
+      switch (_selectedPeriod) {
+        case '7days':
+          periodText = '7 días';
+          break;
+        case '30days':
+          periodText = '30 días';
+          break;
+        case '90days':
+          periodText = '90 días';
+          break;
+        default:
+          periodText = '7 días';
+      }
+
+      final dateRange =
+          '${DateFormat('dd/MM/yyyy').format(_stats!.startDate)} - ${DateFormat('dd/MM/yyyy').format(_stats!.endDate)}';
+
+      // Obtener datos filtrados
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final filteredData = _stats!.dailyData.where((day) {
+        final dayDate = DateTime(day.date.year, day.date.month, day.date.day);
+        return dayDate.isBefore(today);
+      }).toList();
+      filteredData.sort((a, b) => a.date.compareTo(b.date));
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(20),
+          build: (pw.Context context) {
+            return [
+              // ========================================
+              // HEADER
+              // ========================================
+              pw.Container(
+                padding: const pw.EdgeInsets.only(bottom: 20),
+                decoration: const pw.BoxDecoration(
+                  border: pw.Border(
+                    bottom: pw.BorderSide(color: PdfColors.grey300, width: 2),
+                  ),
                 ),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    'Dashboard - AcoFood',
-                    style: pw.TextStyle(
-                      fontSize: 24,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.orange,
-                    ),
-                  ),
-                  pw.SizedBox(height: 8),
-                  pw.Text(
-                    'Período: $periodText',
-                    style: pw.TextStyle(
-                      fontSize: 14,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
-                  ),
-                  pw.Text(
-                    dateRange,
-                    style: const pw.TextStyle(fontSize: 12),
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    'Generado: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
-                    style: const pw.TextStyle(
-                      fontSize: 10,
-                      color: PdfColors.grey700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            pw.SizedBox(height: 20),
-            
-            // ========================================
-            // PROMEDIO DIARIO
-            // ========================================
-            pw.Text(
-              'Promedio Diario',
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.SizedBox(height: 12),
-            
-            pw.Container(
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
-                borderRadius: pw.BorderRadius.circular(8),
-              ),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                children: [
-                  _buildPdfMacroItem(
-                    'Calorías',
-                    averages['calories']!.toStringAsFixed(0),
-                    'kcal',
-                    PdfColors.orange,
-                  ),
-                  _buildPdfMacroItem(
-                    'Proteínas',
-                    averages['protein']!.toStringAsFixed(1),
-                    'g',
-                    PdfColors.red,
-                  ),
-                  _buildPdfMacroItem(
-                    'Carbos',
-                    averages['carbs']!.toStringAsFixed(1),
-                    'g',
-                    PdfColors.blue,
-                  ),
-                  _buildPdfMacroItem(
-                    'Grasas',
-                    averages['fat']!.toStringAsFixed(1),
-                    'g',
-                    PdfColors.green,
-                  ),
-                ],
-              ),
-            ),
-            
-            pw.SizedBox(height: 24),
-            
-            // ========================================
-            // DATOS DIARIOS
-            // ========================================
-            pw.Text(
-              'Datos Diarios',
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.SizedBox(height: 12),
-            
-            pw.Table(
-              border: pw.TableBorder.all(color: PdfColors.grey300),
-              children: [
-                // Header
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(
-                    color: PdfColors.grey200,
-                  ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _buildTableCell('Fecha', isHeader: true),
-                    _buildTableCell('Calorías', isHeader: true),
-                    _buildTableCell('Proteínas', isHeader: true),
-                    _buildTableCell('Carbos', isHeader: true),
-                    _buildTableCell('Grasas', isHeader: true),
+                    pw.Text(
+                      'Dashboard - AcoFood',
+                      style: pw.TextStyle(
+                        fontSize: 24,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.orange,
+                      ),
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      'Período: $periodText',
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(dateRange, style: const pw.TextStyle(fontSize: 12)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'Generado: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}',
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
                   ],
                 ),
-                // Datos
-                ...filteredData.map((day) {
-                  return pw.TableRow(
+              ),
+
+              pw.SizedBox(height: 20),
+
+              // ========================================
+              // PROMEDIO DIARIO
+              // ========================================
+              pw.Text(
+                'Promedio Diario',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+
+              pw.Container(
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildPdfMacroItem(
+                      'Calorías',
+                      averages['calories']!.toStringAsFixed(0),
+                      'kcal',
+                      PdfColors.orange,
+                    ),
+                    _buildPdfMacroItem(
+                      'Proteínas',
+                      averages['protein']!.toStringAsFixed(1),
+                      'g',
+                      PdfColors.red,
+                    ),
+                    _buildPdfMacroItem(
+                      'Carbos',
+                      averages['carbs']!.toStringAsFixed(1),
+                      'g',
+                      PdfColors.blue,
+                    ),
+                    _buildPdfMacroItem(
+                      'Grasas',
+                      averages['fat']!.toStringAsFixed(1),
+                      'g',
+                      PdfColors.green,
+                    ),
+                  ],
+                ),
+              ),
+
+              pw.SizedBox(height: 24),
+
+              // ========================================
+              // DATOS DIARIOS
+              // ========================================
+              pw.Text(
+                'Datos Diarios',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+
+              pw.Table(
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                children: [
+                  // Header
+                  pw.TableRow(
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.grey200,
+                    ),
                     children: [
-                      _buildTableCell(
-                        DateFormat('dd/MM/yyyy').format(day.date),
-                      ),
-                      _buildTableCell(
-                        '${day.calories.toStringAsFixed(0)} kcal',
-                      ),
-                      _buildTableCell(
-                        '${day.protein.toStringAsFixed(1)} g',
-                      ),
-                      _buildTableCell(
-                        '${day.carbs.toStringAsFixed(1)} g',
-                      ),
-                      _buildTableCell(
-                        '${day.fat.toStringAsFixed(1)} g',
-                      ),
+                      _buildTableCell('Fecha', isHeader: true),
+                      _buildTableCell('Calorías', isHeader: true),
+                      _buildTableCell('Proteínas', isHeader: true),
+                      _buildTableCell('Carbos', isHeader: true),
+                      _buildTableCell('Grasas', isHeader: true),
                     ],
-                  );
-                }),
-              ],
-            ),
-            
-            pw.SizedBox(height: 24),
-            
-            // ========================================
-            // TOP 5 ALIMENTOS
-            // ========================================
-            pw.Text(
-              'Top 5 Alimentos',
-              style: pw.TextStyle(
-                fontSize: 18,
-                fontWeight: pw.FontWeight.bold,
+                  ),
+                  // Datos
+                  ...filteredData.map((day) {
+                    return pw.TableRow(
+                      children: [
+                        _buildTableCell(
+                          DateFormat('dd/MM/yyyy').format(day.date),
+                        ),
+                        _buildTableCell(
+                          '${day.calories.toStringAsFixed(0)} kcal',
+                        ),
+                        _buildTableCell('${day.protein.toStringAsFixed(1)} g'),
+                        _buildTableCell('${day.carbs.toStringAsFixed(1)} g'),
+                        _buildTableCell('${day.fat.toStringAsFixed(1)} g'),
+                      ],
+                    );
+                  }),
+                ],
               ),
-            ),
-            pw.SizedBox(height: 12),
-            
-            pw.Container(
-              padding: const pw.EdgeInsets.all(16),
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey300),
-                borderRadius: pw.BorderRadius.circular(8),
+
+              pw.SizedBox(height: 24),
+
+              // ========================================
+              // TOP 5 ALIMENTOS
+              // ========================================
+              pw.Text(
+                'Top 5 Alimentos',
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
-              child: pw.Column(
+              pw.SizedBox(height: 12),
+
+              pw.Container(
+                padding: const pw.EdgeInsets.all(16),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey300),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: _stats!.topFoods.take(5).map((food) {
                     return pw.Padding(
@@ -954,172 +944,165 @@ Future<void> _exportDashboardToPdf() async {
                     );
                   }).toList(),
                 ),
-            ),
-            
-            pw.SizedBox(height: 24),
-            
-            // ========================================
-            // HÁBITOS COMPLETADOS
-            // ========================================
-            if (_stats!.habitCompletion.isNotEmpty) ...[
-              pw.Text(
-                'Hábitos Completados',
-                style: pw.TextStyle(
-                  fontSize: 18,
-                  fontWeight: pw.FontWeight.bold,
-                ),
               ),
-              pw.SizedBox(height: 12),
-              
-              pw.Container(
-                padding: const pw.EdgeInsets.all(16),
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: PdfColors.grey300),
-                  borderRadius: pw.BorderRadius.circular(8),
+
+              pw.SizedBox(height: 24),
+
+              // ========================================
+              // HÁBITOS COMPLETADOS
+              // ========================================
+              if (_stats!.habitCompletion.isNotEmpty) ...[
+                pw.Text(
+                  'Hábitos Completados',
+                  style: pw.TextStyle(
+                    fontSize: 18,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: _stats!.habitCompletion.entries.map((entry) {
-                    final totalDays = filteredData.length;
-                    final percentage = (entry.value / totalDays * 100)
-                        .toStringAsFixed(0);
-                    return pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(vertical: 4),
-                      child: pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text(
-                            entry.key,
-                            style: const pw.TextStyle(fontSize: 12),
-                          ),
-                          pw.Text(
-                            '${entry.value}/$totalDays días ($percentage%)',
-                            style: pw.TextStyle(
-                              fontSize: 12,
-                              fontWeight: pw.FontWeight.bold,
+                pw.SizedBox(height: 12),
+
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(16),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey300),
+                    borderRadius: pw.BorderRadius.circular(8),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: _stats!.habitCompletion.entries.map((entry) {
+                      final totalDays = filteredData.length;
+                      final percentage = (entry.value / totalDays * 100)
+                          .toStringAsFixed(0);
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.symmetric(vertical: 4),
+                        child: pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              entry.key,
+                              style: const pw.TextStyle(fontSize: 12),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                            pw.Text(
+                              '${entry.value}/$totalDays días ($percentage%)',
+                              style: pw.TextStyle(
+                                fontSize: 12,
+                                fontWeight: pw.FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ),
+              ],
+            ];
+          },
+        ),
+      );
+
+      // Guardar PDF
+      final directory = await getTemporaryDirectory();
+      final fileName =
+          'dashboard_${DateFormat('dd-MM-yyyy_HH-mm').format(DateTime.now())}.pdf';
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+      await file.writeAsBytes(await pdf.save());
+
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('PDF Generado'),
+            content: Text('Dashboard exportado correctamente.\n\n$fileName'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await Printing.sharePdf(
+                    bytes: await file.readAsBytes(),
+                    filename: fileName,
+                  );
+                },
+                child: const Text('Compartir'),
               ),
             ],
-          ];
-        },
-      ),
-    );
-
-    // Guardar PDF
-    final directory = await getTemporaryDirectory();
-    final fileName = 'dashboard_${DateFormat('dd-MM-yyyy_HH-mm').format(DateTime.now())}.pdf';
-    final filePath = '${directory.path}/$fileName';
-    final file = File(filePath);
-    await file.writeAsBytes(await pdf.save());
-
-    if (mounted) Navigator.pop(context);
-
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('PDF Generado'),
-          content: Text('Dashboard exportado correctamente.\n\n$fileName'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                await Printing.sharePdf(
-                  bytes: await file.readAsBytes(),
-                  filename: fileName,
-                );
-              },
-              child: const Text('Compartir'),
-            ),
-          ],
-        ),
-      );
-    }
-
+          ),
+        );
+      }
     } catch (e) {
-    if (mounted) Navigator.pop(context);
-    
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Error'),
-          content: Text('No se pudo exportar el dashboard:\n$e'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        ),
-      );
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('No se pudo exportar el dashboard:\n$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          ),
+        );
+      }
     }
   }
-}
 
-// ========================================
-// FUNCIONES AUXILIARES PARA PDF
-// ========================================
+  // ========================================
+  // FUNCIONES AUXILIARES PARA PDF
+  // ========================================
 
-pw.Widget _buildPdfMacroItem(
-  String label,
-  String value,
-  String unit,
-  PdfColor color,
-) {
-  return pw.Column(
-    children: [
-      pw.Text(
-        label,
+  pw.Widget _buildPdfMacroItem(
+    String label,
+    String value,
+    String unit,
+    PdfColor color,
+  ) {
+    return pw.Column(
+      children: [
+        pw.Text(
+          label,
+          style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          value,
+          style: pw.TextStyle(
+            fontSize: 18,
+            fontWeight: pw.FontWeight.bold,
+            color: color,
+          ),
+        ),
+        pw.Text(
+          unit,
+          style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+        ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTableCell(String text, {bool isHeader = false}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(8),
+      child: pw.Text(
+        text,
         style: pw.TextStyle(
-          fontSize: 10,
-          color: PdfColors.grey700,
+          fontSize: isHeader ? 10 : 9,
+          fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
         ),
+        textAlign: pw.TextAlign.center,
       ),
-      pw.SizedBox(height: 4),
-      pw.Text(
-        value,
-        style: pw.TextStyle(
-          fontSize: 18,
-          fontWeight: pw.FontWeight.bold,
-          color: color,
-        ),
-      ),
-      pw.Text(
-        unit,
-        style: const pw.TextStyle(
-          fontSize: 8,
-          color: PdfColors.grey600,
-        ),
-      ),
-    ],
-  );
-}
-
-pw.Widget _buildTableCell(String text, {bool isHeader = false}) {
-  return pw.Padding(
-    padding: const pw.EdgeInsets.all(8),
-    child: pw.Text(
-      text,
-      style: pw.TextStyle(
-        fontSize: isHeader ? 10 : 9,
-        fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
-      ),
-      textAlign: pw.TextAlign.center,
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildLegendItem(String label, Color color) {
     return Row(

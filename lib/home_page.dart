@@ -1,7 +1,7 @@
 import 'package:acofoodflutter/models/food.dart';
 import 'package:flutter/material.dart';
 import 'models/user_profile.dart';
-import 'services/database_service.dart';
+import 'services/storage_factory.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -57,6 +57,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _searchQuery = "";
+  final TextEditingController _searchController =
+      TextEditingController(); // 👈 AGREGAR
   double _weight = 0.0;
   double _tareWeight = 0.0;
   bool _scaleExpanded = false;
@@ -105,7 +107,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadSortOrder() async {
     final prefs = await SharedPreferences.getInstance();
-    final counts = await DatabaseService.instance.getFoodUsageCounts();
+    final counts = await StorageFactory.instance.getFoodUsageCounts();
     setState(() {
       _sortOrder = prefs.getString('sort_order') ?? 'alfabetico';
       _foodUsageCounts = counts;
@@ -131,7 +133,7 @@ class _HomePageState extends State<HomePage> {
         supplementDose: result['dose'],
       );
 
-      await DatabaseService.instance.createEntry(entry);
+      await StorageFactory.instance.createEntry(entry);
       _loadHistory();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -325,7 +327,7 @@ class _HomePageState extends State<HomePage> {
       Navigator.pop(context);
 
       if (success) {
-        final newProfile = await DatabaseService.instance.getUserProfile();
+        final newProfile = await StorageFactory.instance.getUserProfile();
         if (newProfile != null) {
           widget.onUpdateProfile(newProfile);
         }
@@ -448,7 +450,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       isScrollControlled: true,
       builder: (context) => FutureBuilder<List<Habit>>(
-        future: DatabaseService.instance.getAllHabits(),
+        future: StorageFactory.instance.getAllHabits(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -503,7 +505,7 @@ class _HomePageState extends State<HomePage> {
                     title: Text(habit.name),
                     value: habit.enabled,
                     onChanged: (value) async {
-                      await DatabaseService.instance.updateHabitEnabled(
+                      await StorageFactory.instance.updateHabitEnabled(
                         habit.id!,
                         value ?? true,
                       );
@@ -756,7 +758,7 @@ class _HomePageState extends State<HomePage> {
         timestamp: entry.timestamp,
       );
 
-      await DatabaseService.instance.updateEntry(updatedEntry);
+      await StorageFactory.instance.updateEntry(updatedEntry);
       _loadHistory();
 
       ScaffoldMessenger.of(
@@ -785,7 +787,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (confirmed == true) {
-      await DatabaseService.instance.deleteEntry(entry.id!);
+      await StorageFactory.instance.deleteEntry(entry.id!);
       _loadHistory();
 
       ScaffoldMessenger.of(
@@ -841,7 +843,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadHistory() async {
-    final entries = await DatabaseService.instance.getEntriesByDate(
+    final entries = await StorageFactory.instance.getEntriesByDate(
       _selectedDate,
     );
     setState(() {
@@ -935,6 +937,9 @@ class _HomePageState extends State<HomePage> {
           manganese: 0,
           selenium: 0,
           iodine: 0,
+          molybdenum: 0,
+          chromium: 0,
+          fluorine: 0,
           vitaminA: 0,
           vitaminC: 0,
           vitaminD: 0,
@@ -1010,6 +1015,9 @@ class _HomePageState extends State<HomePage> {
         'vitaminB12': report.vitaminB12,
         'vitaminD': report.vitaminD,
         'iodine': report.iodine,
+        'molybdenum': report.molybdenum,
+        'chromium': report.chromium,
+        'fluorine': report.fluorine,
         'histidine': report.histidine,
         'isoleucine': report.isoleucine,
         'leucine': report.leucine,
@@ -1033,7 +1041,7 @@ class _HomePageState extends State<HomePage> {
     // Solo permitir si la fecha es hoy o anterior
     if (dateNormalized.isBefore(today) ||
         dateNormalized.isAtSameMomentAs(today)) {
-      final entries = await DatabaseService.instance.getEntriesByDate(date);
+      final entries = await StorageFactory.instance.getEntriesByDate(date);
 
       setState(() {
         _selectedDate = date;
@@ -1073,9 +1081,7 @@ class _HomePageState extends State<HomePage> {
         // ⚠️ No existe en cache - calcular en tiempo real
         print('⚠️ Cache miss: $key - calculando desde DB...');
 
-        final entries = await DatabaseService.instance.getEntriesByDate(
-          current,
-        );
+        final entries = await StorageFactory.instance.getEntriesByDate(current);
 
         if (entries.isNotEmpty) {
           report = await _calculator.calculateDailyTotals(entries);
@@ -1114,6 +1120,9 @@ class _HomePageState extends State<HomePage> {
             'vitaminB12': report.vitaminB12,
             'vitaminD': report.vitaminD,
             'iodine': report.iodine,
+            'molybdenum': report.molybdenum,
+            'chromium': report.chromium,
+            'fluorine': report.fluorine,
             'histidine': report.histidine,
             'isoleucine': report.isoleucine,
             'leucine': report.leucine,
@@ -1222,6 +1231,11 @@ class _HomePageState extends State<HomePage> {
         _pendingIngredients.add(
           RecipeIngredient(recipeId: 0, food: fullFood, grams: grams),
         );
+
+        setState(() {
+          _searchQuery = "";
+          _searchController.clear();
+        });
 
         if (!mounted) return;
 
@@ -1335,8 +1349,8 @@ class _HomePageState extends State<HomePage> {
         food: ingredient.food,
         grams: ingredient.grams,
       );
-      await DatabaseService.instance.createEntry(newEntry);
-      await DatabaseService.instance.incrementFoodUsage(ingredient.food.id!);
+      await StorageFactory.instance.createEntry(newEntry);
+      await StorageFactory.instance.incrementFoodUsage(ingredient.food.id!);
     }
 
     setState(() {
@@ -1411,7 +1425,7 @@ class _HomePageState extends State<HomePage> {
         createdAt: DateTime.now(),
       );
 
-      await DatabaseService.instance.saveRecipe(recipe, _pendingIngredients);
+      await StorageFactory.instance.saveRecipe(recipe, _pendingIngredients);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1530,6 +1544,10 @@ class _HomePageState extends State<HomePage> {
         'manganeso': (Food f) => f.manganese,
         'selenio': (Food f) => f.selenium,
         'yodo': (Food f) => f.iodine,
+        'molibdeno': (Food f) => f.molybdenum,
+        'cromo': (Food f) => f.chromium,
+        'fluor': (Food f) => f.fluorine,
+        'flúor': (Food f) => f.fluorine,
         'histidina': (Food f) => f.histidine,
         'isoleucina': (Food f) => f.isoleucine,
         'leucina': (Food f) => f.leucine,
@@ -1652,7 +1670,7 @@ class _HomePageState extends State<HomePage> {
           },
           onSortOrderChanged: (newOrder) async {
             setState(() => _sortOrder = newOrder);
-            final counts = await DatabaseService.instance.getFoodUsageCounts();
+            final counts = await StorageFactory.instance.getFoodUsageCounts();
             setState(() => _foodUsageCounts = counts);
             _buildDisplayGroups();
           },
@@ -2162,6 +2180,7 @@ class _HomePageState extends State<HomePage> {
                   });
                 },
                 child: TextField(
+                  controller: _searchController,
                   focusNode: _searchFocusNode,
                   textCapitalization: TextCapitalization.characters,
                   textAlign: TextAlign.left,

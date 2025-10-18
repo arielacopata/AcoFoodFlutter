@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/database_service.dart';
+import '../services/storage_factory.dart';
 import '../models/user_profile.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -176,7 +176,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       expenditure: int.tryParse(_expenditureController.text) ?? 0,
     );
 
-    await DatabaseService.instance.saveUserProfile(profile);
+    await StorageFactory.instance.saveUserProfile(profile);
 
     // 👇 NUEVO: Notifica al padre
     if (widget.onProfileUpdated != null) {
@@ -209,7 +209,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
       fat: _fatPercentage,
     );
 
-    await DatabaseService.instance.saveUserProfile(updatedProfile);
+    await StorageFactory.instance.saveUserProfile(updatedProfile);
 
     if (widget.onProfileUpdated != null) {
       widget.onProfileUpdated!(updatedProfile);
@@ -307,7 +307,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
         goalCalories: goalCalories,
       );
 
-      await DatabaseService.instance.saveUserProfile(updatedProfile);
+      await StorageFactory.instance.saveUserProfile(updatedProfile);
       if (widget.onProfileUpdated != null) {
         widget.onProfileUpdated!(updatedProfile);
       }
@@ -353,7 +353,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
               const SizedBox(height: 16),
               Expanded(
                 child: FutureBuilder<List<Recipe>>(
-                  future: DatabaseService.instance.getAllRecipes(),
+                  future: StorageFactory.instance.getAllRecipes(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -456,7 +456,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
   }
 
   Future<void> _showRecipeDetails(BuildContext ctx, Recipe recipe) async {
-    final ingredients = await DatabaseService.instance.getRecipeIngredients(
+    final ingredients = await StorageFactory.instance.getRecipeIngredients(
       recipe.id!,
     );
 
@@ -501,7 +501,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
   }
 
   Future<void> _useRecipe(BuildContext ctx, Recipe recipe) async {
-    await DatabaseService.instance.registerRecipeIngredients(recipe.id!);
+    await StorageFactory.instance.registerRecipeIngredients(recipe.id!);
 
     Navigator.of(ctx).pop(); // Cerrar gestor de recetas
 
@@ -538,7 +538,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
     );
 
     if (confirm == true) {
-      await DatabaseService.instance.deleteRecipe(recipe.id!);
+      await StorageFactory.instance.deleteRecipe(recipe.id!);
 
       Navigator.of(ctx).pop();
       _showRecipesManager();
@@ -580,7 +580,7 @@ class _SettingsDrawerState extends State<SettingsDrawer> {
 
     // Si el usuario confirmó, borramos el historial
     if (confirmed == true) {
-      await DatabaseService.instance.clearTodayHistory();
+      await StorageFactory.instance.clearTodayHistory();
 
       if (widget.onHistoryChanged != null) {
         widget.onHistoryChanged!();

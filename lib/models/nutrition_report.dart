@@ -32,6 +32,9 @@ class NutritionReport {
   final double vitaminB7;
   final double vitaminB9;
   final double iodine;
+  final double molybdenum;  // ← Debe existir
+  final double chromium;    // ← Debe existir
+  final double fluorine;    // ← Debe existir
   final double vitaminB12;
   final double vitaminD;
 
@@ -80,6 +83,9 @@ class NutritionReport {
     this.vitaminB7 = 0,
     this.vitaminB9 = 0,
     this.iodine = 0,
+    this.molybdenum = 0,  // ← SÍ, agregar esto
+    this.chromium = 0,    // ← SÍ, agregar esto
+    this.fluorine = 0,    // ← SÍ, agregar esto
     this.vitaminB12 = 0,
     this.vitaminD = 0,
 
@@ -130,6 +136,9 @@ class NutritionReport {
       vitaminB7: totals['vitaminB7'] ?? 0,
       vitaminB9: totals['vitaminB9'] ?? 0,
       iodine: totals['iodine'] ?? 0,
+      molybdenum: totals['molybdenum'] ?? 0,  // ← NUEVO
+      chromium: totals['chromium'] ?? 0,      // ← NUEVO
+      fluorine: totals['fluorine'] ?? 0,      // ← NUEVO
       vitaminB12: totals['vitaminB12'] ?? 0,
       vitaminD: totals['vitaminD'] ?? 0,
 
@@ -179,6 +188,9 @@ class NutritionReport {
     vitaminB12: (json['vitaminB12'] ?? 0).toDouble(),
     vitaminD: (json['vitaminD'] ?? 0).toDouble(),
     iodine: (json['iodine'] ?? 0).toDouble(),
+    molybdenum: (json['molybdenum'] ?? 0).toDouble(),
+    chromium: (json['chromium'] ?? 0).toDouble(),
+    fluorine: (json['fluorine'] ?? 0).toDouble(),
     histidine: (json['histidine'] ?? 0).toDouble(),
     isoleucine: (json['isoleucine'] ?? 0).toDouble(),
     leucine: (json['leucine'] ?? 0).toDouble(),

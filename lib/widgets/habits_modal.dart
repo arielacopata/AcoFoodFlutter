@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/habit.dart';
-import '../services/database_service.dart';
+import '../services/storage_factory.dart';
 import 'habit_calendar.dart';
 import '../screens/habit_info_screen.dart';
 
@@ -26,17 +26,17 @@ class _HabitsModalState extends State<HabitsModal> {
   }
 
   Future<void> _loadHabits() async {
-    final habits = await DatabaseService.instance.getEnabledHabits();
+    final habits = await StorageFactory.instance.getEnabledHabits();
     final today = DateTime.now();
 
     Map<int, int> streaks = {};
     Map<int, bool> completed = {};
 
     for (final habit in habits) {
-      streaks[habit.id!] = await DatabaseService.instance.calculateStreak(
+      streaks[habit.id!] = await StorageFactory.instance.calculateStreak(
         habit.id!,
       );
-      final logs = await DatabaseService.instance.getHabitLogsByDate(
+      final logs = await StorageFactory.instance.getHabitLogsByDate(
         habit.id!,
         today,
       );
@@ -154,12 +154,12 @@ class _HabitsModalState extends State<HabitsModal> {
     String? detail, {
     int? calories,
   }) async {
-    await DatabaseService.instance.logHabit(habitId, detail);
+    await StorageFactory.instance.logHabit(habitId, detail ?? '');
 
     // Si hay calorías, actualizar expenditure del perfil
     // Si hay calorías, actualizar expenditure del perfil
     if (calories != null && calories > 0) {
-      await DatabaseService.instance.updateExpenditureForToday(calories);
+      await StorageFactory.instance.updateExpenditureForToday(calories);
     }
 
     await _loadHabits();
@@ -192,35 +192,35 @@ class _HabitsModalState extends State<HabitsModal> {
                 'Tareas Saludables',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-Row(
-  mainAxisSize: MainAxisSize.min,
-  children: [
-    IconButton(
-      icon: const Icon(Icons.info_outline, size: 20),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const HabitInfoScreen(),
-          ),
-        );
-      },
-    ),
-    IconButton(
-      icon: const Icon(Icons.settings, size: 20),
-      onPressed: () {
-        Navigator.pop(context);
-        if (widget.onSettingsTap != null) {
-          widget.onSettingsTap!();
-        }
-      },
-    ),
-    IconButton(
-      icon: const Icon(Icons.close),
-      onPressed: () => Navigator.pop(context),
-    ),
-  ],
-),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.info_outline, size: 20),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const HabitInfoScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings, size: 20),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      if (widget.onSettingsTap != null) {
+                        widget.onSettingsTap!();
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 16),

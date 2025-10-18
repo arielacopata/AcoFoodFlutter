@@ -1,29 +1,31 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/database_service.dart';
+import '../services/storage_factory.dart';
 import '../models/user_profile.dart';
+import 'sqlite_storage_service.dart';
 
 class ImportService {
   static Future<bool> importFromJson(String jsonContent) async {
     try {
       final data = jsonDecode(jsonContent) as Map<String, dynamic>;
-      
+
       // Validar versión
       final version = data['version'] as String?;
       if (version != '1.0') {
         print('Versión de backup no compatible: $version');
         return false;
       }
-      
-      final db = await DatabaseService.instance.database;
-      
+
+      final db =
+          await (StorageFactory.instance as SQLiteStorageService).database;
+
       // 1. Restaurar perfil
       if (data['profile'] != null) {
         final profileData = data['profile'] as Map<String, dynamic>;
         final profile = UserProfile.fromMap(profileData);
-        await DatabaseService.instance.saveUserProfile(profile);
+        await StorageFactory.instance.saveUserProfile(profile);
       }
-      
+
       // 2. Limpiar y restaurar historial
       await db.delete('history');
       final history = data['history'] as List<dynamic>?;
@@ -32,7 +34,7 @@ class ImportService {
           await db.insert('history', entry as Map<String, dynamic>);
         }
       }
-      
+
       // 3. Limpiar y restaurar logs de hábitos
       await db.delete('habit_logs');
       final habitLogs = data['habitLogs'] as List<dynamic>?;
@@ -41,7 +43,7 @@ class ImportService {
           await db.insert('habit_logs', log as Map<String, dynamic>);
         }
       }
-      
+
       // 4. Restaurar contadores de uso
       await db.delete('food_usage');
       final foodUsage = data['foodUsage'] as List<dynamic>?;
@@ -50,7 +52,7 @@ class ImportService {
           await db.insert('food_usage', usage as Map<String, dynamic>);
         }
       }
-      
+
       // 5. Restaurar preferencias
       final prefs = await SharedPreferences.getInstance();
       final preferences = data['preferences'] as Map<String, dynamic>?;
@@ -68,10 +70,13 @@ class ImportService {
           await prefs.setBool('lino_enabled', preferences['lino_enabled']);
         }
         if (preferences['legumbres_enabled'] != null) {
-          await prefs.setBool('legumbres_enabled', preferences['legumbres_enabled']);
+          await prefs.setBool(
+            'legumbres_enabled',
+            preferences['legumbres_enabled'],
+          );
         }
       }
-      
+
       return true;
     } catch (e) {
       print('Error importando backup: $e');

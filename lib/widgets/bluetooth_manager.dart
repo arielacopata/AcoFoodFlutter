@@ -26,6 +26,13 @@ class _BluetoothManagerState extends State<BluetoothManager> {
   void initState() {
     super.initState();
     _checkPermissions();
+  
+      Future.delayed(const Duration(milliseconds: 800), () {
+    if (mounted) {
+      _startScan();
+    }
+  });
+
   }
 
   Future<void> _checkPermissions() async {

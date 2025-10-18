@@ -190,7 +190,7 @@ final List<Food> foods = [
 // ================================
 
 final Map<int, Map<String, dynamic>> nutrientsData = {
-  1: {
+1: {
     "fullName": "Avena (Arrollada)",
     "Calorías": 371,
     "Proteínas": 13.1,
@@ -226,8 +226,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 1.3,
     "Vitamina B7 (Biotina)": 0,
-    "Molibdeno": 0,
-    "Cromo": 0,
+    "Molibdeno": 47,
+    "Cromo": 2,
     "Flúor": 0,
     "Omega-3": 0.1,
     "Omega-6": 2.4,
@@ -242,7 +242,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.7,
     "Treonina": 0.44,
     "Triptófano": 0.19,
-    "Valina": 0.73,
+    "Valina": 0.73
   },
   2: {
     "fullName": "Avena (Laminada)",
@@ -280,7 +280,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 1.3,
     "Vitamina B7 (Biotina)": 0,
-    "Molibdeno": 0,
+    "Molibdeno": 47,
     "Cromo": 0,
     "Flúor": 0,
     "Omega-3": 0.1,
@@ -296,7 +296,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.7,
     "Treonina": 0.44,
     "Triptófano": 0.19,
-    "Valina": 0.73,
+    "Valina": 0.73
   },
   3: {
     "fullName": "Banana",
@@ -334,8 +334,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.33,
     "Vitamina B7 (Biotina)": 0,
-    "Molibdeno": 0,
-    "Cromo": 0,
+    "Molibdeno": 15,
+    "Cromo": 1,
     "Flúor": 0,
     "Omega-3": 0.03,
     "Omega-6": 0.05,
@@ -350,7 +350,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.05,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.05,
+    "Valina": 0.05
   },
   4: {
     "fullName": "Maní",
@@ -404,7 +404,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 1.3,
     "Treonina": 0.69,
     "Triptófano": 0.25,
-    "Valina": 1.03,
+    "Valina": 1.03
   },
   5: {
     "fullName": "Mandarina",
@@ -458,7 +458,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.02,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.03,
+    "Valina": 0.03
   },
   6: {
     "fullName": "Nueces",
@@ -512,7 +512,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.71,
     "Treonina": 0.59,
     "Triptófano": 0.17,
-    "Valina": 0.75,
+    "Valina": 0.75
   },
   7: {
     "fullName": "Cebolla (Cruda)",
@@ -566,7 +566,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   8: {
     "fullName": "Cebolla (Cocida)",
@@ -620,7 +620,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.05,
+    "Valina": 0.05
   },
   9: {
     "fullName": "Cebolla (Salteada)",
@@ -674,7 +674,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.05,
     "Treonina": 0.03,
     "Triptófano": 0.02,
-    "Valina": 0.06,
+    "Valina": 0.06
   },
   10: {
     "fullName": "Garbanzos (Cocidos)",
@@ -713,7 +713,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.286,
     "Vitamina B7 (Biotina)": 4.8,
     "Molibdeno": 52,
-    "Cromo": 5.4,
+    "Cromo": 3,
     "Flúor": 26,
     "Omega-3": 0.041,
     "Omega-6": 1.155,
@@ -728,7 +728,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.47,
     "Treonina": 0.32,
     "Triptófano": 0.08,
-    "Valina": 0.37,
+    "Valina": 0.37
   },
   11: {
     "fullName": "Garbanzos (Brotes (germinados))",
@@ -782,7 +782,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.45,
     "Treonina": 0.3,
     "Triptófano": 0.08,
-    "Valina": 0.35,
+    "Valina": 0.35
   },
   12: {
     "fullName": "Calabaza (Cocida)",
@@ -836,7 +836,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   13: {
     "fullName": "Calabaza (Sopa)",
@@ -890,7 +890,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.05,
+    "Valina": 0.05
   },
   14: {
     "fullName": "Calabaza (Cruda)",
@@ -944,7 +944,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.05,
+    "Valina": 0.05
   },
   15: {
     "fullName": "Boniato (Cocido)",
@@ -998,7 +998,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.08,
     "Treonina": 0.07,
     "Triptófano": 0.02,
-    "Valina": 0.07,
+    "Valina": 0.07
   },
   16: {
     "fullName": "Boniato (Al horno)",
@@ -1052,7 +1052,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.11,
     "Treonina": 0.09,
     "Triptófano": 0.03,
-    "Valina": 0.1,
+    "Valina": 0.1
   },
   17: {
     "fullName": "Batata (Cocido)",
@@ -1091,7 +1091,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.8,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 1.8,
     "Flúor": 0,
     "Omega-3": 0,
     "Omega-6": 0,
@@ -1106,7 +1106,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.08,
     "Treonina": 0.07,
     "Triptófano": 0.02,
-    "Valina": 0.07,
+    "Valina": 0.07
   },
   18: {
     "fullName": "Batata (Al horno)",
@@ -1160,7 +1160,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.11,
     "Treonina": 0.09,
     "Triptófano": 0.03,
-    "Valina": 0.1,
+    "Valina": 0.1
   },
   20: {
     "fullName": "Quinoa (Cocida)",
@@ -1199,7 +1199,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.773,
     "Vitamina B7 (Biotina)": 4.5,
     "Molibdeno": 48,
-    "Cromo": 0,
+    "Cromo": 2.5,
     "Flúor": 0,
     "Omega-3": 0.085,
     "Omega-6": 0.97,
@@ -1214,7 +1214,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.2,
     "Treonina": 0.14,
     "Triptófano": 0.05,
-    "Valina": 0.21,
+    "Valina": 0.21
   },
   21: {
     "fullName": "Lechuga",
@@ -1268,7 +1268,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.06,
     "Treonina": 0.06,
     "Triptófano": 0.01,
-    "Valina": 0.07,
+    "Valina": 0.07
   },
   22: {
     "fullName": "Palta (Hass)",
@@ -1322,7 +1322,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.08,
     "Treonina": 0.06,
     "Triptófano": 0.02,
-    "Valina": 0.09,
+    "Valina": 0.09
   },
   23: {
     "fullName": "Papa (Cocida)",
@@ -1376,7 +1376,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.08,
     "Treonina": 0.07,
     "Triptófano": 0.03,
-    "Valina": 0.11,
+    "Valina": 0.11
   },
   24: {
     "fullName": "Papa (Al horno)",
@@ -1430,7 +1430,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.11,
     "Treonina": 0.09,
     "Triptófano": 0.04,
-    "Valina": 0.15,
+    "Valina": 0.15
   },
   25: {
     "fullName": "Zanahoria (Cocida)",
@@ -1469,8 +1469,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.273,
     "Vitamina B7 (Biotina)": 0.3,
     "Molibdeno": 2,
-    "Cromo": 0,
-    "Flúor": 32,
+    "Cromo": 0.8,
+    "Flúor": 3.2,
     "Omega-3": 0,
     "Omega-6": 0.07,
     "Omega-9": 0,
@@ -1484,7 +1484,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.05,
     "Triptófano": 0.01,
-    "Valina": 0.03,
+    "Valina": 0.03
   },
   26: {
     "fullName": "Remolacha (Rallada)",
@@ -1538,7 +1538,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.05,
     "Treonina": 0.05,
     "Triptófano": 0.02,
-    "Valina": 0.06,
+    "Valina": 0.06
   },
   27: {
     "fullName": "Remolacha (Hervida)",
@@ -1592,7 +1592,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.05,
     "Treonina": 0.05,
     "Triptófano": 0.02,
-    "Valina": 0.06,
+    "Valina": 0.06
   },
   28: {
     "fullName": "Remolacha (Al horno)",
@@ -1646,7 +1646,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.07,
     "Treonina": 0.07,
     "Triptófano": 0.02,
-    "Valina": 0.08,
+    "Valina": 0.08
   },
   29: {
     "fullName": "Rúcula",
@@ -1700,7 +1700,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.12,
     "Treonina": 0.1,
     "Triptófano": 0.03,
-    "Valina": 0.14,
+    "Valina": 0.14
   },
   30: {
     "fullName": "Semillas de lino",
@@ -1754,7 +1754,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.89,
     "Treonina": 0.74,
     "Triptófano": 0.22,
-    "Valina": 1.0,
+    "Valina": 1
   },
   31: {
     "fullName": "Tomate",
@@ -1793,7 +1793,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.089,
     "Vitamina B7 (Biotina)": 1.2,
     "Molibdeno": 2.3,
-    "Cromo": 0.5,
+    "Cromo": 4,
     "Flúor": 2.3,
     "Omega-3": 0.003,
     "Omega-6": 0.089,
@@ -1808,7 +1808,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.03,
+    "Valina": 0.03
   },
   32: {
     "fullName": "Zanahoria (Rallada)",
@@ -1847,8 +1847,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.273,
     "Vitamina B7 (Biotina)": 0.3,
     "Molibdeno": 2,
-    "Cromo": 0,
-    "Flúor": 32,
+    "Cromo": 1.5,
+    "Flúor": 3.2,
     "Omega-3": 0,
     "Omega-6": 0.1,
     "Omega-9": 0.012,
@@ -1862,7 +1862,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.06,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   33: {
     "fullName": "Zanahoria (Entera)",
@@ -1901,8 +1901,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.273,
     "Vitamina B7 (Biotina)": 0.3,
     "Molibdeno": 2,
-    "Cromo": 0,
-    "Flúor": 32,
+    "Cromo": 1.5,
+    "Flúor": 3.2,
     "Omega-3": 0,
     "Omega-6": 0.1,
     "Omega-9": 0.012,
@@ -1916,7 +1916,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.06,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   41: {
     "fullName": "Soja texturizada",
@@ -1955,7 +1955,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 1.7,
     "Vitamina B7 (Biotina)": 19,
     "Molibdeno": 210,
-    "Cromo": 0,
+    "Cromo": 4,
     "Flúor": 0,
     "Omega-3": 0.17,
     "Omega-6": 1.8,
@@ -1970,7 +1970,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 2.65,
     "Treonina": 2.06,
     "Triptófano": 0.69,
-    "Valina": 2.56,
+    "Valina": 2.56
   },
   42: {
     "fullName": "Palta (Brasilera)",
@@ -2024,7 +2024,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.08,
     "Treonina": 0.06,
     "Triptófano": 0.02,
-    "Valina": 0.09,
+    "Valina": 0.09
   },
   43: {
     "fullName": "Garbanzos (Tostados (pre-hidratados))",
@@ -2078,7 +2078,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 1.1,
     "Treonina": 0.74,
     "Triptófano": 0.19,
-    "Valina": 0.86,
+    "Valina": 0.86
   },
   44: {
     "fullName": "Poroto Blanco (Alubia)",
@@ -2116,9 +2116,9 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.22,
     "Vitamina B7 (Biotina)": 5,
-    "Molibdeno": 130,
-    "Cromo": 0,
-    "Flúor": 0,
+    "Molibdeno": 48,
+    "Cromo": 3.2,
+    "Flúor": 8,
     "Omega-3": 0.155,
     "Omega-6": 0.122,
     "Omega-9": 0,
@@ -2132,7 +2132,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.5,
     "Treonina": 0.37,
     "Triptófano": 0.11,
-    "Valina": 0.5,
+    "Valina": 0.5
   },
   45: {
     "fullName": "Poroto Negro",
@@ -2170,9 +2170,9 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.224,
     "Vitamina B7 (Biotina)": 6,
-    "Molibdeno": 140,
-    "Cromo": 0,
-    "Flúor": 0,
+    "Molibdeno": 52,
+    "Cromo": 4,
+    "Flúor": 12,
     "Omega-3": 0.11,
     "Omega-6": 0.13,
     "Omega-9": 0,
@@ -2186,7 +2186,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.47,
     "Treonina": 0.34,
     "Triptófano": 0.1,
-    "Valina": 0.47,
+    "Valina": 0.47
   },
   46: {
     "fullName": "Poroto Rojo",
@@ -2224,9 +2224,9 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.2,
     "Vitamina B7 (Biotina)": 5.5,
-    "Molibdeno": 135,
-    "Cromo": 0,
-    "Flúor": 0,
+    "Molibdeno": 52,
+    "Cromo": 4.8,
+    "Flúor": 10,
     "Omega-3": 0.14,
     "Omega-6": 0.12,
     "Omega-9": 0,
@@ -2240,7 +2240,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.46,
     "Treonina": 0.32,
     "Triptófano": 0.1,
-    "Valina": 0.47,
+    "Valina": 0.47
   },
   47: {
     "fullName": "Poroto Frutilla (Pinto)",
@@ -2278,9 +2278,9 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.21,
     "Vitamina B7 (Biotina)": 5.8,
-    "Molibdeno": 138,
-    "Cromo": 0,
-    "Flúor": 0,
+    "Molibdeno": 56,
+    "Cromo": 4,
+    "Flúor": 12,
     "Omega-3": 0.13,
     "Omega-6": 0.16,
     "Omega-9": 0,
@@ -2294,7 +2294,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.48,
     "Treonina": 0.33,
     "Triptófano": 0.1,
-    "Valina": 0.49,
+    "Valina": 0.49
   },
   49: {
     "fullName": "Lenteja (Marrón)",
@@ -2332,9 +2332,9 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.638,
     "Vitamina B7 (Biotina)": 2.5,
-    "Molibdeno": 120,
+    "Molibdeno": 32,
     "Cromo": 0,
-    "Flúor": 0,
+    "Flúor": 8,
     "Omega-3": 0.05,
     "Omega-6": 0.12,
     "Omega-9": 0,
@@ -2348,7 +2348,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.45,
     "Treonina": 0.33,
     "Triptófano": 0.08,
-    "Valina": 0.45,
+    "Valina": 0.45
   },
   50: {
     "fullName": "Lenteja Roja",
@@ -2386,9 +2386,9 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.6,
     "Vitamina B7 (Biotina)": 2.2,
-    "Molibdeno": 110,
+    "Molibdeno": 28,
     "Cromo": 0,
-    "Flúor": 0,
+    "Flúor": 8,
     "Omega-3": 0,
     "Omega-6": 0,
     "Omega-9": 0,
@@ -2402,7 +2402,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.38,
     "Treonina": 0.28,
     "Triptófano": 0.07,
-    "Valina": 0.38,
+    "Valina": 0.38
   },
   51: {
     "fullName": "Lentejón (Lenteja verde)",
@@ -2440,9 +2440,9 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.638,
     "Vitamina B7 (Biotina)": 2.5,
-    "Molibdeno": 120,
+    "Molibdeno": 32,
     "Cromo": 0,
-    "Flúor": 0,
+    "Flúor": 8,
     "Omega-3": 0,
     "Omega-6": 0,
     "Omega-9": 0,
@@ -2456,7 +2456,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.44,
     "Treonina": 0.32,
     "Triptófano": 0.08,
-    "Valina": 0.44,
+    "Valina": 0.44
   },
   52: {
     "fullName": "Manzana Roja",
@@ -2506,11 +2506,11 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Isoleucina": 0.01,
     "Leucina": 0.02,
     "Lisina": 0.01,
-    "Metionina": 0.0,
+    "Metionina": 0,
     "Fenilalanina": 0.01,
     "Treonina": 0.01,
-    "Triptófano": 0.0,
-    "Valina": 0.01,
+    "Triptófano": 0,
+    "Valina": 0.01
   },
   53: {
     "fullName": "Cúrcuma (molida)",
@@ -2564,7 +2564,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.4,
     "Treonina": 0.32,
     "Triptófano": 0.13,
-    "Valina": 0.5,
+    "Valina": 0.5
   },
   54: {
     "fullName": "Coco Rallado (sin azúcar)",
@@ -2618,7 +2618,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.35,
     "Treonina": 0.25,
     "Triptófano": 0.08,
-    "Valina": 0.42,
+    "Valina": 0.42
   },
   55: {
     "fullName": "Pimentón",
@@ -2666,13 +2666,13 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Cafeína": 0,
     "Histidina": 0.32,
     "Isoleucina": 0.63,
-    "Leucina": 1.0,
+    "Leucina": 1,
     "Lisina": 0.69,
     "Metionina": 0.21,
     "Fenilalanina": 0.59,
     "Treonina": 0.54,
     "Triptófano": 0.17,
-    "Valina": 0.68,
+    "Valina": 0.68
   },
   56: {
     "fullName": "Orégano (seco)",
@@ -2726,7 +2726,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.46,
     "Treonina": 0.35,
     "Triptófano": 0.18,
-    "Valina": 0.52,
+    "Valina": 0.52
   },
   57: {
     "fullName": "Jengibre (raíz)",
@@ -2780,7 +2780,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.08,
     "Treonina": 0.07,
     "Triptófano": 0.02,
-    "Valina": 0.1,
+    "Valina": 0.1
   },
   58: {
     "fullName": "Semillas de chía",
@@ -2834,7 +2834,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.88,
     "Treonina": 0.61,
     "Triptófano": 0.28,
-    "Valina": 0.92,
+    "Valina": 0.92
   },
   59: {
     "fullName": "Semillas de sésamo",
@@ -2888,7 +2888,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.88,
     "Treonina": 0.65,
     "Triptófano": 0.33,
-    "Valina": 0.88,
+    "Valina": 0.88
   },
   60: {
     "fullName": "Semillas de girasol",
@@ -2927,7 +2927,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 7.04,
     "Vitamina B7 (Biotina)": 66,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 1.8,
     "Flúor": 0,
     "Omega-3": 0.07,
     "Omega-6": 23.05,
@@ -2942,7 +2942,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.94,
     "Treonina": 0.82,
     "Triptófano": 0.31,
-    "Valina": 1.1,
+    "Valina": 1.1
   },
   61: {
     "fullName": "Limón",
@@ -2996,7 +2996,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   62: {
     "fullName": "Brócoli",
@@ -3035,7 +3035,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.573,
     "Vitamina B7 (Biotina)": 0.4,
     "Molibdeno": 13,
-    "Cromo": 1.1,
+    "Cromo": 11,
     "Flúor": 0,
     "Omega-3": 0.02,
     "Omega-6": 0.04,
@@ -3050,7 +3050,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.11,
     "Treonina": 0.09,
     "Triptófano": 0.03,
-    "Valina": 0.14,
+    "Valina": 0.14
   },
   63: {
     "fullName": "Kale",
@@ -3104,7 +3104,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.2,
     "Treonina": 0.17,
     "Triptófano": 0.06,
-    "Valina": 0.23,
+    "Valina": 0.23
   },
   64: {
     "fullName": "Pepino",
@@ -3158,7 +3158,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.02,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.03,
+    "Valina": 0.03
   },
   65: {
     "fullName": "Aceitunas Negras",
@@ -3212,7 +3212,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   66: {
     "fullName": "Ajo",
@@ -3251,7 +3251,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.596,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 23,
-    "Cromo": 0,
+    "Cromo": 2.1,
     "Flúor": 0,
     "Omega-3": 0.01,
     "Omega-6": 0.24,
@@ -3266,7 +3266,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.2,
     "Treonina": 0.18,
     "Triptófano": 0.06,
-    "Valina": 0.3,
+    "Valina": 0.3
   },
   67: {
     "fullName": "Coliflor",
@@ -3320,7 +3320,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.07,
     "Treonina": 0.06,
     "Triptófano": 0.02,
-    "Valina": 0.1,
+    "Valina": 0.1
   },
   68: {
     "fullName": "Espinaca",
@@ -3374,7 +3374,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.14,
     "Treonina": 0.13,
     "Triptófano": 0.04,
-    "Valina": 0.17,
+    "Valina": 0.17
   },
   69: {
     "fullName": "Manzana Verde",
@@ -3424,11 +3424,11 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Isoleucina": 0.01,
     "Leucina": 0.02,
     "Lisina": 0.01,
-    "Metionina": 0.0,
+    "Metionina": 0,
     "Fenilalanina": 0.01,
     "Treonina": 0.01,
-    "Triptófano": 0.0,
-    "Valina": 0.01,
+    "Triptófano": 0,
+    "Valina": 0.01
   },
   70: {
     "fullName": "Morrón rojo",
@@ -3467,7 +3467,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.317,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 1.5,
     "Flúor": 2,
     "Omega-3": 0.01,
     "Omega-6": 0.05,
@@ -3482,7 +3482,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   71: {
     "fullName": "Morrón verde",
@@ -3521,7 +3521,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.168,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 1.5,
     "Flúor": 2,
     "Omega-3": 0.01,
     "Omega-6": 0.06,
@@ -3536,7 +3536,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   72: {
     "fullName": "Morrón amarillo",
@@ -3575,7 +3575,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.3,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 1.5,
     "Flúor": 2,
     "Omega-3": 0.02,
     "Omega-6": 0.08,
@@ -3590,7 +3590,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   73: {
     "fullName": "Pera",
@@ -3640,11 +3640,11 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Isoleucina": 0.01,
     "Leucina": 0.02,
     "Lisina": 0.02,
-    "Metionina": 0.0,
+    "Metionina": 0,
     "Fenilalanina": 0.01,
     "Treonina": 0.01,
-    "Triptófano": 0.0,
-    "Valina": 0.02,
+    "Triptófano": 0,
+    "Valina": 0.02
   },
   74: {
     "fullName": "Perejil",
@@ -3698,7 +3698,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.14,
     "Treonina": 0.12,
     "Triptófano": 0.04,
-    "Valina": 0.17,
+    "Valina": 0.17
   },
   75: {
     "fullName": "Repollo (verde)",
@@ -3752,7 +3752,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.04,
     "Triptófano": 0.01,
-    "Valina": 0.06,
+    "Valina": 0.06
   },
   76: {
     "fullName": "Repollo colorado",
@@ -3806,7 +3806,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.05,
     "Treonina": 0.05,
     "Triptófano": 0.01,
-    "Valina": 0.07,
+    "Valina": 0.07
   },
   77: {
     "fullName": "Repollitos de Bruselas",
@@ -3860,7 +3860,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.13,
     "Treonina": 0.12,
     "Triptófano": 0.04,
-    "Valina": 0.18,
+    "Valina": 0.18
   },
   78: {
     "fullName": "Zapallito (Zucchini)",
@@ -3914,7 +3914,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.06,
+    "Valina": 0.06
   },
   79: {
     "fullName": "Arándanos",
@@ -3968,7 +3968,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   80: {
     "fullName": "Frutilla",
@@ -4018,11 +4018,11 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Isoleucina": 0.02,
     "Leucina": 0.04,
     "Lisina": 0.03,
-    "Metionina": 0.0,
+    "Metionina": 0,
     "Fenilalanina": 0.02,
     "Treonina": 0.02,
-    "Triptófano": 0.0,
-    "Valina": 0.02,
+    "Triptófano": 0,
+    "Valina": 0.02
   },
   81: {
     "fullName": "Sandía",
@@ -4076,7 +4076,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.02,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.02,
+    "Valina": 0.02
   },
   82: {
     "fullName": "Melón (Cantalupo)",
@@ -4130,7 +4130,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   83: {
     "fullName": "Melón amarillo (Canary)",
@@ -4183,8 +4183,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Metionina": 0.01,
     "Fenilalanina": 0.02,
     "Treonina": 0.01,
-    "Triptófano": 0.0,
-    "Valina": 0.02,
+    "Triptófano": 0,
+    "Valina": 0.02
   },
   84: {
     "fullName": "Melón blanco (Honeydew)",
@@ -4237,8 +4237,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Metionina": 0.01,
     "Fenilalanina": 0.02,
     "Treonina": 0.01,
-    "Triptófano": 0.0,
-    "Valina": 0.02,
+    "Triptófano": 0,
+    "Valina": 0.02
   },
   85: {
     "fullName": "Aceite de Oliva",
@@ -4292,7 +4292,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0,
     "Treonina": 0,
     "Triptófano": 0,
-    "Valina": 0,
+    "Valina": 0
   },
   86: {
     "fullName": "Aceite de Coco",
@@ -4346,7 +4346,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0,
     "Treonina": 0,
     "Triptófano": 0,
-    "Valina": 0,
+    "Valina": 0
   },
   87: {
     "fullName": "Cacao en polvo (100%)",
@@ -4385,7 +4385,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.254,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 25,
     "Flúor": 0,
     "Omega-3": 0.05,
     "Omega-6": 0.3,
@@ -4400,7 +4400,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.88,
     "Treonina": 0.7,
     "Triptófano": 0.22,
-    "Valina": 0.98,
+    "Valina": 0.98
   },
   88: {
     "fullName": "Vinagre de Manzana",
@@ -4454,7 +4454,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0,
     "Treonina": 0,
     "Triptófano": 0,
-    "Valina": 0,
+    "Valina": 0
   },
   89: {
     "fullName": "Almendras",
@@ -4493,7 +4493,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.471,
     "Vitamina B7 (Biotina)": 3.1,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 1.5,
     "Flúor": 0,
     "Omega-3": 0.006,
     "Omega-6": 12.18,
@@ -4508,7 +4508,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 1.12,
     "Treonina": 0.59,
     "Triptófano": 0.21,
-    "Valina": 0.81,
+    "Valina": 0.81
   },
   90: {
     "fullName": "Avellanas",
@@ -4562,7 +4562,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.65,
     "Treonina": 0.49,
     "Triptófano": 0.15,
-    "Valina": 0.67,
+    "Valina": 0.67
   },
   91: {
     "fullName": "Dátiles (Medjool)",
@@ -4616,7 +4616,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.07,
     "Treonina": 0.06,
     "Triptófano": 0.02,
-    "Valina": 0.09,
+    "Valina": 0.09
   },
   92: {
     "fullName": "Canela (molida)",
@@ -4670,7 +4670,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.17,
     "Treonina": 0.14,
     "Triptófano": 0.06,
-    "Valina": 0.2,
+    "Valina": 0.2
   },
   93: {
     "fullName": "Aceitunas Verdes",
@@ -4724,7 +4724,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.04,
     "Triptófano": 0.01,
-    "Valina": 0.05,
+    "Valina": 0.05
   },
   94: {
     "fullName": "Durazno",
@@ -4778,7 +4778,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.02,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.02,
+    "Valina": 0.02
   },
   95: {
     "fullName": "Kiwi pelado",
@@ -4832,7 +4832,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.05,
     "Triptófano": 0.01,
-    "Valina": 0.06,
+    "Valina": 0.06
   },
   96: {
     "fullName": "Ananá (Piña)",
@@ -4885,8 +4885,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Metionina": 0.01,
     "Fenilalanina": 0.02,
     "Treonina": 0.01,
-    "Triptófano": 0.0,
-    "Valina": 0.02,
+    "Triptófano": 0,
+    "Valina": 0.02
   },
   97: {
     "fullName": "Mango",
@@ -4940,7 +4940,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   98: {
     "fullName": "Uva",
@@ -4993,8 +4993,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Metionina": 0.01,
     "Fenilalanina": 0.01,
     "Treonina": 0.02,
-    "Triptófano": 0.0,
-    "Valina": 0.02,
+    "Triptófano": 0,
+    "Valina": 0.02
   },
   99: {
     "fullName": "Cereza",
@@ -5048,7 +5048,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.02,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.03,
+    "Valina": 0.03
   },
   100: {
     "fullName": "Berenjena (Cocida)",
@@ -5102,7 +5102,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.04,
     "Treonina": 0.03,
     "Triptófano": 0.01,
-    "Valina": 0.05,
+    "Valina": 0.05
   },
   101: {
     "fullName": "Champiñones (Salteados)",
@@ -5141,7 +5141,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 1.49,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 3,
     "Flúor": 0,
     "Omega-3": 0,
     "Omega-6": 0,
@@ -5156,7 +5156,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.12,
     "Treonina": 0.14,
     "Triptófano": 0.04,
-    "Valina": 0.1,
+    "Valina": 0.1
   },
   102: {
     "fullName": "Espárragos (Cocidos)",
@@ -5194,8 +5194,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0,
     "Vitamina B7 (Biotina)": 0,
-    "Molibdeno": 0,
-    "Cromo": 0,
+    "Molibdeno": 2,
+    "Cromo": 4.2,
     "Flúor": 0,
     "Omega-3": 0,
     "Omega-6": 0,
@@ -5210,7 +5210,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.08,
     "Treonina": 0.07,
     "Triptófano": 0.03,
-    "Valina": 0.13,
+    "Valina": 0.13
   },
   103: {
     "fullName": "Puerro (Cocido)",
@@ -5264,7 +5264,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.1,
     "Treonina": 0.09,
     "Triptófano": 0.03,
-    "Valina": 0.13,
+    "Valina": 0.13
   },
   104: {
     "fullName": "Apio (Crudo)",
@@ -5318,7 +5318,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.03,
     "Treonina": 0.02,
     "Triptófano": 0.01,
-    "Valina": 0.03,
+    "Valina": 0.03
   },
   105: {
     "fullName": "Bok Choy (Pak Choi, Cocido)",
@@ -5372,7 +5372,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.05,
     "Treonina": 0.06,
     "Triptófano": 0.02,
-    "Valina": 0.08,
+    "Valina": 0.08
   },
   106: {
     "fullName": "Arroz Integral (Cocido)",
@@ -5411,7 +5411,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B5 (Ácido pantoténico)": 0.29,
     "Vitamina B7 (Biotina)": 0,
     "Molibdeno": 0,
-    "Cromo": 0,
+    "Cromo": 2.8,
     "Flúor": 0,
     "Omega-3": 0.32,
     "Omega-6": 0.33,
@@ -5426,7 +5426,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.14,
     "Treonina": 0.09,
     "Triptófano": 0.03,
-    "Valina": 0.15,
+    "Valina": 0.15
   },
   107: {
     "fullName": "Arroz Blanco (Cocido)",
@@ -5464,7 +5464,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.32,
     "Vitamina B7 (Biotina)": 0,
-    "Molibdeno": 0,
+    "Molibdeno": 13,
     "Cromo": 0,
     "Flúor": 0,
     "Omega-3": 0.09,
@@ -5480,7 +5480,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.15,
     "Treonina": 0.1,
     "Triptófano": 0.03,
-    "Valina": 0.17,
+    "Valina": 0.17
   },
   108: {
     "fullName": "Trigo Burgol (Cocido)",
@@ -5534,7 +5534,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.15,
     "Treonina": 0.09,
     "Triptófano": 0.04,
-    "Valina": 0.14,
+    "Valina": 0.14
   },
   109: {
     "fullName": "Choclo (Maíz, Cocido)",
@@ -5572,7 +5572,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0,
     "Vitamina B7 (Biotina)": 0,
-    "Molibdeno": 0,
+    "Molibdeno": 6,
     "Cromo": 0,
     "Flúor": 0,
     "Omega-3": 0,
@@ -5588,7 +5588,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.17,
     "Treonina": 0.14,
     "Triptófano": 0.03,
-    "Valina": 0.19,
+    "Valina": 0.19
   },
   110: {
     "fullName": "Tofu (Firme)",
@@ -5642,7 +5642,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.89,
     "Treonina": 0.76,
     "Triptófano": 0.23,
-    "Valina": 0.87,
+    "Valina": 0.87
   },
   111: {
     "fullName": "Levadura Nutricional",
@@ -5696,7 +5696,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 2.1,
     "Treonina": 2.45,
     "Triptófano": 0.6,
-    "Valina": 2.7,
+    "Valina": 2.7
   },
   112: {
     "fullName": "Arvejas (Guisantes, Cocidas)",
@@ -5750,7 +5750,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.25,
     "Treonina": 0.25,
     "Triptófano": 0.05,
-    "Valina": 0.28,
+    "Valina": 0.28
   },
   113: {
     "fullName": "Albahaca (Fresca)",
@@ -5804,7 +5804,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.15,
     "Treonina": 0.13,
     "Triptófano": 0.05,
-    "Valina": 0.18,
+    "Valina": 0.18
   },
   114: {
     "fullName": "Cilantro (Fresco)",
@@ -5858,7 +5858,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.09,
     "Treonina": 0.08,
     "Triptófano": 0.03,
-    "Valina": 0.11,
+    "Valina": 0.11
   },
   115: {
     "fullName": "Menta (Fresca)",
@@ -5912,7 +5912,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.16,
     "Treonina": 0.13,
     "Triptófano": 0.05,
-    "Valina": 0.17,
+    "Valina": 0.17
   },
   116: {
     "fullName": "Kiwi con cáscara",
@@ -5966,7 +5966,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.05,
     "Treonina": 0.06,
     "Triptófano": 0.01,
-    "Valina": 0.07,
+    "Valina": 0.07
   },
   117: {
     "fullName": "Castaña de Cajú",
@@ -6020,7 +6020,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 1.056,
     "Treonina": 0.704,
     "Triptófano": 0.352,
-    "Valina": 1.056,
+    "Valina": 1.056
   },
   118: {
     "fullName": "Nuez Pecan",
@@ -6058,7 +6058,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.863,
     "Vitamina B7 (Biotina)": 25,
-    "Molibdeno": 0,
+    "Molibdeno": 8,
     "Cromo": 0,
     "Flúor": 0,
     "Omega-3": 0.986,
@@ -6074,7 +6074,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.426,
     "Treonina": 0.306,
     "Triptófano": 0.093,
-    "Valina": 0.411,
+    "Valina": 0.411
   },
   119: {
     "fullName": "Pistachos",
@@ -6124,11 +6124,11 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Isoleucina": 0.917,
     "Leucina": 1.604,
     "Lisina": 1.138,
-    "Metionina": 0.360,
+    "Metionina": 0.36,
     "Fenilalanina": 1.092,
     "Treonina": 0.684,
     "Triptófano": 0.251,
-    "Valina": 1.249,
+    "Valina": 1.249
   },
   120: {
     "fullName": "Nueces de Brasil",
@@ -6171,18 +6171,18 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Flúor": 0,
     "Omega-3": 0.17,
     "Omega-6": 23.9,
-    "Omega-9": 23.0,
+    "Omega-9": 23,
     "Colesterol": 0,
     "Cafeína": 0,
     "Histidina": 0.386,
     "Isoleucina": 0.516,
     "Leucina": 1.189,
-    "Lisina": 0.490,
+    "Lisina": 0.49,
     "Metionina": 1.124,
-    "Fenilalanina": 0.630,
+    "Fenilalanina": 0.63,
     "Treonina": 0.365,
     "Triptófano": 0.135,
-    "Valina": 0.756,
+    "Valina": 0.756
   },
   121: {
     "fullName": "Semillas de Calabaza",
@@ -6228,15 +6228,15 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Omega-9": 16.2,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.700,
-    "Isoleucina": 1.280,
-    "Leucina": 2.390,
-    "Lisina": 1.390,
-    "Metionina": 0.600,
-    "Fenilalanina": 1.730,
-    "Treonina": 1.060,
-    "Triptófano": 0.580,
-    "Valina": 1.580,
+    "Histidina": 0.7,
+    "Isoleucina": 1.28,
+    "Leucina": 2.39,
+    "Lisina": 1.39,
+    "Metionina": 0.6,
+    "Fenilalanina": 1.73,
+    "Treonina": 1.06,
+    "Triptófano": 0.58,
+    "Valina": 1.58
   },
   122: {
     "fullName": "Piñones",
@@ -6290,7 +6290,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.52,
     "Treonina": 0.37,
     "Triptófano": 0.11,
-    "Valina": 0.69,
+    "Valina": 0.69
   },
   123: {
     "fullName": "Naranja (Sin piel)",
@@ -6328,7 +6328,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0.25,
     "Vitamina B7 (Biotina)": 0,
-    "Molibdeno": 0,
+    "Molibdeno": 4,
     "Cromo": 0,
     "Flúor": 0,
     "Omega-3": 0.007,
@@ -6344,7 +6344,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.031,
     "Treonina": 0.015,
     "Triptófano": 0.009,
-    "Valina": 0.04,
+    "Valina": 0.04
   },
   124: {
     "fullName": "Ciruela morada (Con piel)",
@@ -6398,7 +6398,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.022,
     "Treonina": 0.023,
     "Triptófano": 0.009,
-    "Valina": 0.036,
+    "Valina": 0.036
   },
   125: {
     "fullName": "Ciruela amarilla (Con piel)",
@@ -6452,7 +6452,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.022,
     "Treonina": 0.023,
     "Triptófano": 0.009,
-    "Valina": 0.036,
+    "Valina": 0.036
   },
   126: {
     "fullName": "Caqui (Con piel)",
@@ -6506,7 +6506,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.021,
     "Treonina": 0.022,
     "Triptófano": 0.008,
-    "Valina": 0.034,
+    "Valina": 0.034
   },
   127: {
     "fullName": "Garbanzos Secos",
@@ -6517,7 +6517,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Azúcares totales": 10.7,
     "Azúcares añadidos": 0,
     "Grasas totales": 6.04,
-    "Grasas saturadas": 0.60,
+    "Grasas saturadas": 0.6,
     "Grasas trans": 0,
     "Calcio": 145,
     "Hierro": 6.7,
@@ -6527,7 +6527,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Sodio": 26,
     "Zinc": 2.8,
     "Cobre": 0.66,
-    "Manganeso": 2.0,
+    "Manganeso": 2,
     "Selenio": 8,
     "Yodo": 6,
     "Vitamina A": 3,
@@ -6542,33 +6542,33 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B6": 0.54,
     "Vitamina B9 (Folato)": 557,
     "Vitamina B12": 0,
-    "Vitamina B5 (Ácido pantoténico)": 1.60,
-    "Vitamina B7 (Biotina)": 8.0,
+    "Vitamina B5 (Ácido pantoténico)": 1.6,
+    "Vitamina B7 (Biotina)": 8,
     "Molibdeno": 150,
-    "Cromo": 16,
+    "Cromo": 7.4,
     "Flúor": 78,
-    "Omega-3": 0.10,
-    "Omega-6": 2.60,
+    "Omega-3": 0.1,
+    "Omega-6": 2.6,
     "Omega-9": 2.742,
     "Colesterol": 0,
     "Cafeína": 0,
     "Histidina": 0.63,
     "Isoleucina": 0.88,
-    "Leucina": 1.50,
-    "Lisina": 1.40,
+    "Leucina": 1.5,
+    "Lisina": 1.4,
     "Metionina": 0.27,
-    "Fenilalanina": 1.10,
+    "Fenilalanina": 1.1,
     "Treonina": 0.77,
-    "Triptófano": 0.20,
-    "Valina": 0.86,
+    "Triptófano": 0.2,
+    "Valina": 0.86
   },
   128: {
     "fullName": "Lentejas Marrones Secas",
     "Calorías": 352,
-    "Proteínas": 25.0,
-    "Carbohidratos": 63.0,
-    "Fibra": 11.0,
-    "Azúcares totales": 2.0,
+    "Proteínas": 25,
+    "Carbohidratos": 63,
+    "Fibra": 11,
+    "Azúcares totales": 2,
     "Azúcares añadidos": 0,
     "Grasas totales": 1.1,
     "Grasas saturadas": 0.15,
@@ -6587,7 +6587,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina A": 1,
     "Vitamina C": 4,
     "Vitamina D": 0,
-    "Vitamina E": 0.50,
+    "Vitamina E": 0.5,
     "Vitamina K": 5,
     "Vitamina B1 (Tiamina)": 0.87,
     "Vitamina B2 (Riboflavina)": 0.21,
@@ -6597,16 +6597,16 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B9 (Folato)": 479,
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 2.14,
-    "Vitamina B7 (Biotina)": 5.0,
+    "Vitamina B7 (Biotina)": 5,
     "Molibdeno": 80,
     "Cromo": 0,
     "Flúor": 20,
-    "Omega-3": 0.10,
+    "Omega-3": 0.1,
     "Omega-6": 0.68,
     "Omega-9": 0.17,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.70,
+    "Histidina": 0.7,
     "Isoleucina": 1.1,
     "Leucina": 1.8,
     "Lisina": 1.7,
@@ -6614,15 +6614,15 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 1.2,
     "Treonina": 0.88,
     "Triptófano": 0.22,
-    "Valina": 1.2,
+    "Valina": 1.2
   },
   129: {
     "fullName": "Lentejas Rojas Secas",
     "Calorías": 358,
-    "Proteínas": 24.0,
-    "Carbohidratos": 63.0,
-    "Fibra": 11.0,
-    "Azúcares totales": 2.0,
+    "Proteínas": 24,
+    "Carbohidratos": 63,
+    "Fibra": 11,
+    "Azúcares totales": 2,
     "Azúcares añadidos": 0,
     "Grasas totales": 2.2,
     "Grasas saturadas": 0.38,
@@ -6634,14 +6634,14 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Potasio": 668,
     "Sodio": 7,
     "Zinc": 3.6,
-    "Cobre": 1.30,
+    "Cobre": 1.3,
     "Manganeso": 1.7,
     "Selenio": 0,
     "Yodo": 0,
     "Vitamina A": 1,
     "Vitamina C": 4,
     "Vitamina D": 0,
-    "Vitamina E": 0.50,
+    "Vitamina E": 0.5,
     "Vitamina K": 5,
     "Vitamina B1 (Tiamina)": 0.51,
     "Vitamina B2 (Riboflavina)": 0.11,
@@ -6650,8 +6650,8 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B6": 0.34,
     "Vitamina B9 (Folato)": 204,
     "Vitamina B12": 0,
-    "Vitamina B5 (Ácido pantoténico)": 1.0,
-    "Vitamina B7 (Biotina)": 5.0,
+    "Vitamina B5 (Ácido pantoténico)": 1,
+    "Vitamina B7 (Biotina)": 5,
     "Molibdeno": 70,
     "Cromo": 0,
     "Flúor": 20,
@@ -6660,23 +6660,23 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Omega-9": 0.68,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.70,
+    "Histidina": 0.7,
     "Isoleucina": 1.1,
     "Leucina": 1.7,
     "Lisina": 1.7,
-    "Metionina": 0.30,
+    "Metionina": 0.3,
     "Fenilalanina": 1.2,
-    "Treonina": 0.90,
+    "Treonina": 0.9,
     "Triptófano": 0.22,
-    "Valina": 1.2,
+    "Valina": 1.2
   },
   130: {
     "fullName": "Lentejones Verdes Secos",
     "Calorías": 352,
-    "Proteínas": 25.0,
-    "Carbohidratos": 63.0,
-    "Fibra": 11.0,
-    "Azúcares totales": 2.0,
+    "Proteínas": 25,
+    "Carbohidratos": 63,
+    "Fibra": 11,
+    "Azúcares totales": 2,
     "Azúcares añadidos": 0,
     "Grasas totales": 1.1,
     "Grasas saturadas": 0.15,
@@ -6695,7 +6695,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina A": 1,
     "Vitamina C": 4,
     "Vitamina D": 0,
-    "Vitamina E": 0.50,
+    "Vitamina E": 0.5,
     "Vitamina K": 5,
     "Vitamina B1 (Tiamina)": 0.87,
     "Vitamina B2 (Riboflavina)": 0.21,
@@ -6705,16 +6705,16 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina B9 (Folato)": 479,
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 2.14,
-    "Vitamina B7 (Biotina)": 5.0,
+    "Vitamina B7 (Biotina)": 5,
     "Molibdeno": 80,
     "Cromo": 0,
     "Flúor": 20,
-    "Omega-3": 0.10,
+    "Omega-3": 0.1,
     "Omega-6": 0.68,
     "Omega-9": 0.17,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.70,
+    "Histidina": 0.7,
     "Isoleucina": 1.1,
     "Leucina": 1.8,
     "Lisina": 1.7,
@@ -6722,18 +6722,18 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 1.2,
     "Treonina": 0.88,
     "Triptófano": 0.22,
-    "Valina": 1.2,
+    "Valina": 1.2
   },
   131: {
     "fullName": "Porotos Blancos Secos",
     "Calorías": 337,
-    "Proteínas": 22.0,
-    "Carbohidratos": 60.0,
-    "Fibra": 15.0,
-    "Azúcares totales": 2.0,
+    "Proteínas": 22,
+    "Carbohidratos": 60,
+    "Fibra": 15,
+    "Azúcares totales": 2,
     "Azúcares añadidos": 0,
     "Grasas totales": 0.8,
-    "Grasas saturadas": 0.10,
+    "Grasas saturadas": 0.1,
     "Grasas trans": 0,
     "Calcio": 147,
     "Hierro": 5.5,
@@ -6741,7 +6741,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fósforo": 600,
     "Potasio": 1185,
     "Sodio": 16,
-    "Zinc": 3.0,
+    "Zinc": 3,
     "Cobre": 1.1,
     "Manganeso": 1.8,
     "Selenio": 13,
@@ -6753,22 +6753,22 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina K": 0,
     "Vitamina B1 (Tiamina)": 0.5,
     "Vitamina B2 (Riboflavina)": 0.2,
-    "Vitamina B3 (Niacina)": 1.0,
+    "Vitamina B3 (Niacina)": 1,
     "Vitamina B4 (Colina)": 74,
     "Vitamina B6": 0.4,
     "Vitamina B9 (Folato)": 306,
     "Vitamina B12": 0,
-    "Vitamina B5 (Ácido pantoténico)": 1.0,
-    "Vitamina B7 (Biotina)": 5.0,
+    "Vitamina B5 (Ácido pantoténico)": 1,
+    "Vitamina B7 (Biotina)": 5,
     "Molibdeno": 120,
     "Cromo": 8,
     "Flúor": 20,
-    "Omega-3": 0.10,
-    "Omega-6": 0.40,
-    "Omega-9": 0.30,
+    "Omega-3": 0.1,
+    "Omega-6": 0.4,
+    "Omega-9": 0.3,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.70,
+    "Histidina": 0.7,
     "Isoleucina": 0.8,
     "Leucina": 1.3,
     "Lisina": 1.3,
@@ -6776,18 +6776,18 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0.9,
     "Treonina": 0.7,
     "Triptófano": 0.17,
-    "Valina": 0.9,
+    "Valina": 0.9
   },
   132: {
     "fullName": "Porotos Negros Secos",
     "Calorías": 341,
-    "Proteínas": 21.0,
-    "Carbohidratos": 62.0,
-    "Fibra": 15.0,
-    "Azúcares totales": 2.0,
+    "Proteínas": 21,
+    "Carbohidratos": 62,
+    "Fibra": 15,
+    "Azúcares totales": 2,
     "Azúcares añadidos": 0,
     "Grasas totales": 1.5,
-    "Grasas saturadas": 0.20,
+    "Grasas saturadas": 0.2,
     "Grasas trans": 0,
     "Calcio": 239,
     "Hierro": 9.7,
@@ -6795,7 +6795,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fósforo": 683,
     "Potasio": 1800,
     "Sodio": 16,
-    "Zinc": 4.0,
+    "Zinc": 4,
     "Cobre": 0.8,
     "Manganeso": 1.1,
     "Selenio": 3,
@@ -6805,43 +6805,43 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina D": 0,
     "Vitamina E": 0,
     "Vitamina K": 0,
-    "Vitamina B1 (Tiamina)": 0.90,
-    "Vitamina B2 (Riboflavina)": 0.20,
-    "Vitamina B3 (Niacina)": 2.0,
+    "Vitamina B1 (Tiamina)": 0.9,
+    "Vitamina B2 (Riboflavina)": 0.2,
+    "Vitamina B3 (Niacina)": 2,
     "Vitamina B4 (Colina)": 80,
     "Vitamina B6": 0.4,
     "Vitamina B9 (Folato)": 447,
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 1.1,
-    "Vitamina B7 (Biotina)": 5.0,
+    "Vitamina B7 (Biotina)": 5,
     "Molibdeno": 130,
     "Cromo": 10,
     "Flúor": 30,
-    "Omega-3": 0.10,
-    "Omega-6": 0.40,
-    "Omega-9": 0.30,
+    "Omega-3": 0.1,
+    "Omega-6": 0.4,
+    "Omega-9": 0.3,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.70,
+    "Histidina": 0.7,
     "Isoleucina": 0.9,
     "Leucina": 1.4,
     "Lisina": 1.5,
     "Metionina": 0.23,
-    "Fenilalanina": 1.0,
+    "Fenilalanina": 1,
     "Treonina": 0.8,
     "Triptófano": 0.18,
-    "Valina": 1.0,
+    "Valina": 1
   },
   133: {
     "fullName": "Porotos Rojos Secos",
     "Calorías": 333,
-    "Proteínas": 24.0,
-    "Carbohidratos": 60.0,
-    "Fibra": 25.0,
-    "Azúcares totales": 2.0,
+    "Proteínas": 24,
+    "Carbohidratos": 60,
+    "Fibra": 25,
+    "Azúcares totales": 2,
     "Azúcares añadidos": 0,
     "Grasas totales": 0.83,
-    "Grasas saturadas": 0.10,
+    "Grasas saturadas": 0.1,
     "Grasas trans": 0,
     "Calcio": 131,
     "Hierro": 8.7,
@@ -6850,7 +6850,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Potasio": 1346,
     "Sodio": 13,
     "Zinc": 2.7,
-    "Cobre": 1.0,
+    "Cobre": 1,
     "Manganeso": 1.1,
     "Selenio": 3,
     "Yodo": 0,
@@ -6859,46 +6859,46 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina D": 0,
     "Vitamina E": 0,
     "Vitamina K": 0,
-    "Vitamina B1 (Tiamina)": 0.90,
-    "Vitamina B2 (Riboflavina)": 0.20,
+    "Vitamina B1 (Tiamina)": 0.9,
+    "Vitamina B2 (Riboflavina)": 0.2,
     "Vitamina B3 (Niacina)": 1.1,
     "Vitamina B4 (Colina)": 80,
     "Vitamina B6": 0.4,
     "Vitamina B9 (Folato)": 394,
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 1.2,
-    "Vitamina B7 (Biotina)": 5.0,
+    "Vitamina B7 (Biotina)": 5,
     "Molibdeno": 130,
     "Cromo": 12,
     "Flúor": 25,
-    "Omega-3": 0.10,
-    "Omega-6": 0.50,
-    "Omega-9": 0.30,
+    "Omega-3": 0.1,
+    "Omega-6": 0.5,
+    "Omega-9": 0.3,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.80,
-    "Isoleucina": 1.0,
+    "Histidina": 0.8,
+    "Isoleucina": 1,
     "Leucina": 1.6,
     "Lisina": 1.6,
     "Metionina": 0.25,
     "Fenilalanina": 1.1,
     "Treonina": 0.9,
     "Triptófano": 0.21,
-    "Valina": 1.1,
+    "Valina": 1.1
   },
   134: {
     "fullName": "Porotos Frutilla Secos",
     "Calorías": 347,
-    "Proteínas": 21.0,
-    "Carbohidratos": 62.0,
-    "Fibra": 16.0,
-    "Azúcares totales": 2.0,
+    "Proteínas": 21,
+    "Carbohidratos": 62,
+    "Fibra": 16,
+    "Azúcares totales": 2,
     "Azúcares añadidos": 0,
     "Grasas totales": 1.2,
-    "Grasas saturadas": 0.20,
+    "Grasas saturadas": 0.2,
     "Grasas trans": 0,
     "Calcio": 113,
-    "Hierro": 5.0,
+    "Hierro": 5,
     "Magnesio": 168,
     "Fósforo": 400,
     "Potasio": 1393,
@@ -6913,32 +6913,32 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina D": 0,
     "Vitamina E": 0,
     "Vitamina K": 0,
-    "Vitamina B1 (Tiamina)": 0.50,
-    "Vitamina B2 (Riboflavina)": 0.20,
+    "Vitamina B1 (Tiamina)": 0.5,
+    "Vitamina B2 (Riboflavina)": 0.2,
     "Vitamina B3 (Niacina)": 1.5,
     "Vitamina B4 (Colina)": 80,
     "Vitamina B6": 0.4,
     "Vitamina B9 (Folato)": 487,
     "Vitamina B12": 0,
-    "Vitamina B5 (Ácido pantoténico)": 1.0,
-    "Vitamina B7 (Biotina)": 5.0,
+    "Vitamina B5 (Ácido pantoténico)": 1,
+    "Vitamina B7 (Biotina)": 5,
     "Molibdeno": 140,
     "Cromo": 10,
     "Flúor": 30,
-    "Omega-3": 0.10,
-    "Omega-6": 0.50,
-    "Omega-9": 0.30,
+    "Omega-3": 0.1,
+    "Omega-6": 0.5,
+    "Omega-9": 0.3,
     "Colesterol": 0,
     "Cafeína": 0,
-    "Histidina": 0.70,
+    "Histidina": 0.7,
     "Isoleucina": 0.9,
     "Leucina": 1.4,
     "Lisina": 1.4,
     "Metionina": 0.22,
-    "Fenilalanina": 1.0,
+    "Fenilalanina": 1,
     "Treonina": 0.8,
     "Triptófano": 0.18,
-    "Valina": 1.0,
+    "Valina": 1
   },
   135: {
     "fullName": "Pimienta Negra",
@@ -6968,10 +6968,10 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Vitamina E": 4.56,
     "Vitamina K": 164,
     "Vitamina B1 (Tiamina)": 0.109,
-    "Vitamina B2 (Riboflavina)": 0.240,
+    "Vitamina B2 (Riboflavina)": 0.24,
     "Vitamina B3 (Niacina)": 1.142,
     "Vitamina B4 (Colina)": 11.3,
-    "Vitamina B6": 0.340,
+    "Vitamina B6": 0.34,
     "Vitamina B9 (Folato)": 10,
     "Vitamina B12": 0,
     "Vitamina B5 (Ácido pantoténico)": 0,
@@ -6979,7 +6979,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Molibdeno": 0,
     "Cromo": 0,
     "Flúor": 0,
-    "Omega-3": 0.20,
+    "Omega-3": 0.2,
     "Omega-6": 0.56,
     "Omega-9": 1.09,
     "Colesterol": 0,
@@ -6992,7 +6992,7 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0,
     "Treonina": 0,
     "Triptófano": 0,
-    "Valina": 0,
+    "Valina": 0
   },
   136: {
     "fullName": "Sal Yodada (30ppm)",
@@ -7046,6 +7046,6 @@ final Map<int, Map<String, dynamic>> nutrientsData = {
     "Fenilalanina": 0,
     "Treonina": 0,
     "Triptófano": 0,
-    "Valina": 0,
+    "Valina": 0
   },
 };

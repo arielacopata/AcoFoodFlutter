@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/habit.dart';
-import '../services/database_service.dart';
+import '../services/storage_factory.dart';
 
 class HabitCalendar extends StatefulWidget {
   final Habit habit;
@@ -29,7 +29,7 @@ class _HabitCalendarState extends State<HabitCalendar> {
 
     for (int i = 0; i < 30; i++) {
       final date = thirtyDaysAgo.add(Duration(days: i));
-      final logs = await DatabaseService.instance.getHabitLogsByDate(
+      final logs = await StorageFactory.instance.getHabitLogsByDate(
         widget.habit.id!,
         date,
       );

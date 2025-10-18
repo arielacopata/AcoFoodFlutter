@@ -28,6 +28,9 @@ class Food {
   final double manganese;
   final double selenium;
   final double iodine;
+  final double molybdenum;  // ← Debe existir
+  final double chromium;    // ← Debe existir
+  final double fluorine;    // ← Debe existir
   final double vitaminA;
   final double vitaminC;
   final double vitaminE;
@@ -80,6 +83,9 @@ class Food {
     this.manganese = 0,
     this.selenium = 0,
     this.iodine = 0,
+    this.molybdenum = 0,  // ← SÍ, esto
+    this.chromium = 0,    // ← SÍ, esto
+    this.fluorine = 0,    // ← SÍ, esto
     this.vitaminA = 0,
     this.vitaminC = 0,
     this.vitaminE = 0,
@@ -142,6 +148,9 @@ class Food {
       manganese: _toDouble(nutrients["Manganeso"]),
       selenium: _toDouble(nutrients["Selenio"]),
       iodine: _toDouble(nutrients["Yodo"]),
+      molybdenum: _toDouble(nutrients['Molibdeno']),  // ← Ya está
+      chromium: _toDouble(nutrients['Cromo']),        // ← Ya está
+      fluorine: _toDouble(nutrients['Flúor']),        // ← Ya está
       vitaminA: _toDouble(nutrients["Vitamina A"]),
       vitaminC: _toDouble(nutrients["Vitamina C"]),
       vitaminE: _toDouble(nutrients["Vitamina E"]),

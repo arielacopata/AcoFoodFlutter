@@ -1,40 +1,35 @@
-// En: lib/services/storage_factory.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'storage_service.dart';
 import '../models/food_entry.dart';
 import '../models/user_profile.dart';
-import 'food_repository.dart';
 import '../models/habit.dart';
-import '../models/dashboard_stats.dart';
-import '../data/supplements_data.dart';
 import '../models/recipe.dart';
+import '../models/dashboard_stats.dart';
+import 'food_repository.dart';
+import '../data/supplements_data.dart';
 
-class DatabaseService {
-  static final DatabaseService instance = DatabaseService._init();
+class SQLiteStorageService implements StorageService {
   static Database? _database;
 
-  DatabaseService._init();
+  @override
+  Future<void> initialize() async {
+    if (_database != null) return;
 
-  Future<void> clearTodayHistory() async {
-    final db = await instance.database;
-    final today = DateTime.now();
-    final startOfDay = DateTime(
-      today.year,
-      today.month,
-      today.day,
-    ).toIso8601String();
+    final dbPath = await getDatabasesPath();
+    final path = join(dbPath, 'aco_food.db');
 
-    await db.delete(
-      'history',
-      where: 'timestamp >= ?',
-      whereArgs: [startOfDay],
+    _database = await openDatabase(
+      path,
+      version: 13,
+      onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
-    print("Historial de hoy borrado de la base de datos.");
   }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('aco_food.db');
+    await initialize();
     return _database!;
   }
 
@@ -272,6 +267,23 @@ class DatabaseService {
     }
   }
 
+  @override
+  Future<void> clearTodayHistory() async {
+    final db = await database;
+    final today = DateTime.now();
+    final startOfDay = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).toIso8601String();
+
+    await db.delete(
+      'history',
+      where: 'timestamp >= ?',
+      whereArgs: [startOfDay],
+    );
+  }
+
   // Obtener todos los hábitos habilitados
   Future<List<Habit>> getAllHabits() async {
     final db = await database;
@@ -365,7 +377,7 @@ class DatabaseService {
 
   // <-- 3. AÑADE LOS NUEVOS MÉTODOS
   Future<int> saveUserProfile(UserProfile profile) async {
-    final db = await instance.database;
+    final db = await database;
     return await db.insert(
       'user_profile',
       profile.toMap(),
@@ -375,7 +387,7 @@ class DatabaseService {
 
   Future<UserProfile?> getUserProfile() async {
     try {
-      final db = await instance.database;
+      final db = await database;
 
       final maps = await db.query(
         'user_profile',
@@ -396,13 +408,13 @@ class DatabaseService {
   }
 
   Future<void> deleteUserProfile() async {
-    final db = await instance.database;
+    final db = await database;
     await db.delete('user_profile', where: 'id = ?', whereArgs: [1]);
     print("Perfil de usuario borrado.");
   }
 
   Future<FoodEntry> createEntry(FoodEntry entry) async {
-    final db = await instance.database;
+    final db = await database;
     final id = await db.insert('history', entry.toMap());
     return FoodEntry(
       id: id,
@@ -460,7 +472,7 @@ class DatabaseService {
 
   // Método para actualizar un entry existente
   Future<int> updateEntry(FoodEntry entry) async {
-    final db = await instance.database;
+    final db = await database;
     return await db.update(
       'history',
       entry.toMapForUpdate(), // ✅ Sin incluir id
@@ -471,12 +483,12 @@ class DatabaseService {
 
   // Método para eliminar un entry
   Future<int> deleteEntry(int id) async {
-    final db = await instance.database;
+    final db = await database;
     return await db.delete('history', where: 'id = ?', whereArgs: [id]);
   }
 
   Future close() async {
-    final db = await instance.database;
+    final db = await database;
     db.close();
   }
 

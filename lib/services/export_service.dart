@@ -5,7 +5,8 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../models/food_entry.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../services/database_service.dart';
+import '../services/storage_factory.dart';
+import 'sqlite_storage_service.dart';
 
 class ExportService {
   /// Genera texto plano para Zepp (con cantidades sumadas y nombre completo)
@@ -39,10 +40,10 @@ class ExportService {
 
   /// Genera JSON completo para backup (perfil, historial, hábitos, preferencias)
   static Future<String> generateJsonBackup(List<FoodEntry> entries) async {
-    final db = await DatabaseService.instance.database;
+    final db = await (StorageFactory.instance as SQLiteStorageService).database;
 
     // Obtener todos los datos
-    final profile = await DatabaseService.instance.getUserProfile();
+    final profile = await StorageFactory.instance.getUserProfile();
     final allHistory = await db.query('history', orderBy: 'timestamp DESC');
     final habitLogs = await db.query('habit_logs', orderBy: 'timestamp DESC');
     final foodUsage = await db.query('food_usage');
