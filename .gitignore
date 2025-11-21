@@ -57,3 +57,41 @@ web/.dart_tool/
 !/android/gradle/wrapper/gradle-wrapper.properties
 !/ios/Flutter/Generated.xcconfig
 !/ios/Flutter/ephemeral
+
+# Firebase credentials
+google-services.json
+.firebaserc
+.firebase/
+firebase.json
+
+# Backups and data files
+backups/
+bkp/
+acofood_backup_*.json
+*.rar
+
+# Local scripts and utilities
+*.ps1
+rclone.exe
+/src/
+
+# Documentation drafts
+AGENTS.md
+GEMINI.md
+claude.md
+
+# Local data and temp files
+*.psd
+pdf/
+wrapper/
+error.txt
+Lista.txt
+*.jpg
+*.png
+!android/**/*.png
+!ios/**/*.png
+!web/**/*.png
+!assets/**/*.png
+
+# Excel files
+*.xlsx

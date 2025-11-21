@@ -10,12 +10,19 @@ class NutritionCalculator {
     for (final entry in entries) {
       final food = entry.food;
 
-      // Si es suplemento, procesar la dosis
-      if (entry.isSupplement) {
-        _processSupplementDose(totals, food.id, entry.supplementDose);
+      // Caso especial: B12 con factor de absorción
+      if (entry.isSupplement && food.id == 9001) {
+        final dose = _parseB12Dose(entry.supplementDose);
+        if (dose > 0) {
+          // Factor intrínseco: máximo 1.5 mcg por dosis
+          // Difusión pasiva: ~1% del resto
+          final absorbed = dose <= 1.5 ? dose : 1.5 + ((dose - 1.5) * 0.01);
+          _addToTotal(totals, 'vitaminB12', absorbed);
+        }
         continue; // No procesar como alimento normal
       }
 
+      // Todos los demás (alimentos y suplementos)
       final scale = entry.grams / 100.0;
 
       _addToTotal(totals, 'calories', food.calories * scale);
@@ -39,8 +46,12 @@ class NutritionCalculator {
       _addToTotal(totals, 'manganese', food.manganese * scale);
       _addToTotal(totals, 'selenium', food.selenium * scale);
       _addToTotal(totals, 'iodine', food.iodine * scale);
+      _addToTotal(totals, 'molybdenum', food.molybdenum * scale); // ← AGREGAR
+      _addToTotal(totals, 'chromium', food.chromium * scale); // ← AGREGAR
+      _addToTotal(totals, 'fluorine', food.fluorine * scale); // ← AGREGAR
       _addToTotal(totals, 'vitaminA', food.vitaminA * scale);
       _addToTotal(totals, 'vitaminC', food.vitaminC * scale);
+      _addToTotal(totals, 'vitaminD', food.vitaminD * scale);
       _addToTotal(totals, 'vitaminE', food.vitaminE * scale);
       _addToTotal(totals, 'vitaminK', food.vitaminK * scale);
       _addToTotal(totals, 'vitaminB1', food.vitaminB1 * scale);
@@ -51,6 +62,7 @@ class NutritionCalculator {
       _addToTotal(totals, 'vitaminB6', food.vitaminB6 * scale);
       _addToTotal(totals, 'vitaminB7', food.vitaminB7 * scale);
       _addToTotal(totals, 'vitaminB9', food.vitaminB9 * scale);
+      _addToTotal(totals, 'vitaminB12', food.vitaminB12 * scale);
 
       // Aminoácidos esenciales
       _addToTotal(totals, 'histidine', food.histidine * scale);
@@ -62,6 +74,17 @@ class NutritionCalculator {
       _addToTotal(totals, 'threonine', food.threonine * scale);
       _addToTotal(totals, 'tryptophan', food.tryptophan * scale);
       _addToTotal(totals, 'valine', food.valine * scale);
+      _addToTotal(totals, 'alanine', food.alanine * scale);
+      _addToTotal(totals, 'arginine', food.arginine * scale);
+      _addToTotal(totals, 'asparticAcid', food.asparticAcid * scale);
+      _addToTotal(totals, 'glutamicAcid', food.glutamicAcid * scale);
+      _addToTotal(totals, 'glycine', food.glycine * scale);
+      _addToTotal(totals, 'proline', food.proline * scale);
+      _addToTotal(totals, 'serine', food.serine * scale);
+      _addToTotal(totals, 'tyrosine', food.tyrosine * scale);
+      _addToTotal(totals, 'cysteine', food.cysteine * scale);
+      _addToTotal(totals, 'glutamine', food.glutamine * scale);
+      _addToTotal(totals, 'asparagine', food.asparagine * scale);
     }
 
     return NutritionReport.fromMap(totals);
@@ -71,31 +94,11 @@ class NutritionCalculator {
     map[key] = (map[key] ?? 0) + value;
   }
 
-void _processSupplementDose(Map<String, double> totals, int? supplementId, String? dose) {
-  if (dose == null || supplementId == null) return;
-  
-  // Extraer el número de la dosis (ej: "1000 mcg" -> 1000)
-  final numberMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
-  if (numberMatch == null) return;
-  
-  final value = double.parse(numberMatch.group(1)!);
-  
-  switch (supplementId) {
-    case 9001: // B12 con factor de absorción
-      // Factor intrínseco: máximo 1.5 mcg por dosis
-      // Difusión pasiva: ~1% del resto
-      final absorbed = value <= 1.5 
-          ? value 
-          : 1.5 + ((value - 1.5) * 0.01);
-      _addToTotal(totals, 'vitaminB12', absorbed);
-      break;
-    case 9002: // Vitamina D
-      _addToTotal(totals, 'vitaminD', value); // UI
-      break;
-    case 9003: // Omega-3
-      // Asumir que viene en mg, convertir a g
-      _addToTotal(totals, 'omega3', value / 1000);
-      break;
+  // Helper para parsear dosis de B12
+  double _parseB12Dose(String? dose) {
+    if (dose == null) return 0;
+    final numberMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+    if (numberMatch == null) return 0;
+    return double.parse(numberMatch.group(1)!);
   }
-}
 }

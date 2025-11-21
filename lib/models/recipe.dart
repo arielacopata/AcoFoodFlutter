@@ -4,16 +4,18 @@ import 'food.dart';
 
 class Recipe {
   final int? id;
+  final String? firestoreDocId; // 👈 AGREGAR
   final String name;
   final String? emoji;
-  final DateTime createdAt;
+  final DateTime? createdAt; // 👈 Hacerlo nullable
   final List<RecipeIngredient> ingredients;
 
   Recipe({
     this.id,
+    this.firestoreDocId, // 👈 AGREGAR
     required this.name,
     this.emoji,
-    required this.createdAt,
+    this.createdAt, // 👈 Ya no required
     this.ingredients = const [],
   });
 
@@ -22,7 +24,7 @@ class Recipe {
       'id': id,
       'name': name,
       'emoji': emoji,
-      'created_at': createdAt.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
     };
   }
 
@@ -31,7 +33,11 @@ class Recipe {
       id: map['id'] as int?,
       name: map['name'] as String,
       emoji: map['emoji'] as String?,
-      createdAt: DateTime.parse(map['created_at'] as String),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'] as String)
+          : (map['created_at'] != null
+                ? DateTime.parse(map['created_at'] as String)
+                : null),
     );
   }
 

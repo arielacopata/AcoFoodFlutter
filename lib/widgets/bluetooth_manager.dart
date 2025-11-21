@@ -22,19 +22,52 @@ class _BluetoothManagerState extends State<BluetoothManager> {
   final List<ScanResult> _scanResults = [];
   StreamSubscription<BluetoothConnectionState>? _connectionStateSubscription;
 
-  @override
-  void initState() {
-    super.initState();
-    _checkPermissions();
+@override
+void initState() {
+  super.initState();
+  _initializeBluetooth();
+}
+
+Future<void> _initializeBluetooth() async {
+  // 1. Verificar si Bluetooth está soportado
+  if (await FlutterBluePlus.isSupported == false) {
+    debugPrint('Bluetooth no está soportado en este dispositivo');
+    return;
   }
 
-  Future<void> _checkPermissions() async {
-    await Permission.bluetoothScan.request();
-    await Permission.bluetoothConnect.request();
-    await Permission.bluetooth.request();
-    await Permission.location.request();
-    await Permission.locationWhenInUse.request();
+  // 2. Pedir permisos
+  await _checkPermissions();
+
+  // 3. Verificar si Bluetooth está encendido
+  final adapterState = await FlutterBluePlus.adapterState.first;
+  if (adapterState != BluetoothAdapterState.on) {
+    debugPrint('Bluetooth está apagado, solicitando que se encienda');
+    try {
+      // En Android, esto abrirá el diálogo del sistema para encender Bluetooth
+      await FlutterBluePlus.turnOn();
+    } catch (e) {
+      debugPrint('Error al intentar encender Bluetooth: $e');
+      return;
+    }
   }
+
+  // 4. Esperar un poco para que el sistema procese los permisos
+  await Future.delayed(const Duration(milliseconds: 500));
+
+  // 5. Iniciar scan solo si mounted
+  if (mounted) {
+    _startScan();
+  }
+}
+
+Future<void> _checkPermissions() async {
+  // Pedir todos los permisos juntos en un solo request
+  await [
+    Permission.location,
+    Permission.bluetoothScan,
+    Permission.bluetoothConnect,
+  ].request();
+}
 
   void _startScan() {
     FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));

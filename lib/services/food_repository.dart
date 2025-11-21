@@ -1,61 +1,56 @@
-// En: lib/services/food_repository.dart
+// lib/services/food_repository.dart
 
 import '../models/food.dart';
-// Usamos un alias para evitar conflictos de nombres, ya que ambos archivos
-// tienen una variable llamada "foods".
+import '../services/storage_factory.dart';
 import '../data/foods.dart' as food_data;
 
 class FoodRepository {
-  // Lista privada que almacenará nuestros objetos Food "enriquecidos".
+  // Enriched foods cache
   List<Food> _allFoods = [];
 
-  // Usamos un singleton para asegurarnos de que solo haya una instancia
-  // de este repositorio en toda la app.
+  // Singleton
   static final FoodRepository _instance = FoodRepository._internal();
-  factory FoodRepository() {
-    return _instance;
-  }
+  factory FoodRepository() => _instance;
   FoodRepository._internal();
 
-  // --- MÉTODOS PÚBLICOS ---
-
-  /// Carga y combina los datos de los alimentos con sus nutrientes.
-  /// Debe llamarse una vez al iniciar la aplicación.
-  Future<void> loadFoods() async {
-    // Si ya hemos cargado los datos, no hacemos nada para evitar trabajo extra.
-    if (_allFoods.isNotEmpty) return;
+  // Load base + custom foods and merge nutrients
+  Future<void> loadFoods({bool forceReload = false}) async {
+    if (_allFoods.isNotEmpty && !forceReload) return;
+    if (forceReload) {
+      _allFoods.clear();
+    }
 
     final List<Food> enrichedFoods = [];
 
-    // Iteramos sobre la lista de alimentos base.
+    // Base foods with nutrient data
     for (final baseFood in food_data.foods) {
-      // Buscamos sus nutrientes correspondientes por ID.
       final nutrients = food_data.nutrientsData[baseFood.id];
-
-      // Si encontramos los nutrientes, creamos un objeto Food completo.
       if (nutrients != null) {
         enrichedFoods.add(Food.fromData(baseFood, nutrients));
       }
     }
 
-    _allFoods = enrichedFoods;
-    print(
-      "✅ FoodRepository: Se cargaron ${_allFoods.length} alimentos con sus datos nutricionales.",
-    );
-  }
-
-  /// Devuelve la lista completa de alimentos.
-  List<Food> getAllFoods() {
-    return _allFoods;
-  }
-
-  /// Busca y devuelve un alimento específico por su ID.
-  Food? getFoodById(int id) {
+    // Custom foods from storage
     try {
-      return _allFoods.firstWhere((food) => food.id == id);
-    } catch (e) {
-      // Si no se encuentra el alimento, devuelve null.
-      return null;
+      final customFoods = await StorageFactory.instance.getCustomFoods();
+      enrichedFoods.addAll(customFoods);
+    } catch (_) {
+      // ignore
     }
+
+    // Hide reserved sentinel if present
+    enrichedFoods.removeWhere((food) => food.id == 9999);
+
+    _allFoods = enrichedFoods;
+  }
+
+  List<Food> getAllFoods() => _allFoods;
+
+  Food? getFoodById(int id) {
+    for (final f in _allFoods) {
+      if (f.id == id) return f;
+    }
+    return null;
   }
 }
+

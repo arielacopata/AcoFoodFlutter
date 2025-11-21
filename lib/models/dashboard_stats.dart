@@ -7,8 +7,9 @@ class DashboardStats {
   final double avgFat;
   final List<DailyData> dailyData;
   final List<TopFood> topFoods;
+  final List<TopFood> topFoodsByWeight;
   final Map<String, int> habitCompletion;
-  
+
   DashboardStats({
     required this.startDate,
     required this.endDate,
@@ -18,6 +19,7 @@ class DashboardStats {
     required this.avgFat,
     required this.dailyData,
     required this.topFoods,
+    required this.topFoodsByWeight,
     required this.habitCompletion,
   });
 }
@@ -25,16 +27,20 @@ class DashboardStats {
 class DailyData {
   final DateTime date;
   final double calories;
-  final double protein;   // Agregar
-  final double carbs;     // Agregar
-  final double fat;       // Agregar
-  
+  final double protein;
+  final double carbs;
+  final double fat;
+  final Map<String, double> nutrients; // Todos los nutrientes del día
+  final bool isFasting; // Flag para indicar si es un día de ayuno explícito
+
   DailyData({
     required this.date,
     required this.calories,
-    required this.protein,  // Agregar
-    required this.carbs,    // Agregar
-    required this.fat,      // Agregar
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    this.nutrients = const {},
+    this.isFasting = false,
   });
 }
 
@@ -44,7 +50,7 @@ class TopFood {
   final String emoji;
   final int timesConsumed;
   final double totalGrams;
-  
+
   TopFood({
     required this.name,
     required this.fullName,

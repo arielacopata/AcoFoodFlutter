@@ -1,4 +1,4 @@
-// En: lib/services/database_service.dart
+// En: lib/services/storage_factory.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/food_entry.dart';
@@ -44,7 +44,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 13, // 👈 subí la versión para que dispare onUpgrade
+      version: 15, // 👈 subí la versión para que dispare onUpgrade
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -148,6 +148,98 @@ class DatabaseService {
     FOREIGN KEY (recipe_id) REFERENCES recipes (id) ON DELETE CASCADE
   )
 ''');
+
+    // Tabla de custom_foods
+    await db.execute('''
+CREATE TABLE custom_foods (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      emoji TEXT NOT NULL,
+      name TEXT NOT NULL,
+      fullName TEXT,
+      calories REAL DEFAULT 0,
+      proteins REAL DEFAULT 0,
+      carbohydrates REAL DEFAULT 0,
+      fiber REAL DEFAULT 0,
+      totalSugars REAL DEFAULT 0,
+      totalFats REAL DEFAULT 0,
+      saturatedFats REAL DEFAULT 0,
+      omega3 REAL DEFAULT 0,
+      omega6 REAL DEFAULT 0,
+      omega9 REAL DEFAULT 0,
+      calcium REAL DEFAULT 0,
+      iron REAL DEFAULT 0,
+      magnesium REAL DEFAULT 0,
+      phosphorus REAL DEFAULT 0,
+      potassium REAL DEFAULT 0,
+      sodium REAL DEFAULT 0,
+      zinc REAL DEFAULT 0,
+      copper REAL DEFAULT 0,
+      manganese REAL DEFAULT 0,
+      selenium REAL DEFAULT 0,
+      iodine REAL DEFAULT 0,
+      molybdenum REAL DEFAULT 0,
+      chromium REAL DEFAULT 0,
+      fluorine REAL DEFAULT 0,
+      vitaminA REAL DEFAULT 0,
+      vitaminC REAL DEFAULT 0,
+      vitaminD REAL DEFAULT 0,
+      vitaminE REAL DEFAULT 0,
+      vitaminK REAL DEFAULT 0,
+      vitaminB1 REAL DEFAULT 0,
+      vitaminB2 REAL DEFAULT 0,
+      vitaminB3 REAL DEFAULT 0,
+      vitaminB4 REAL DEFAULT 0,
+      vitaminB5 REAL DEFAULT 0,
+      vitaminB6 REAL DEFAULT 0,
+      vitaminB7 REAL DEFAULT 0,
+      vitaminB9 REAL DEFAULT 0,
+      vitaminB12 REAL DEFAULT 0,
+      histidine REAL DEFAULT 0,
+      isoleucine REAL DEFAULT 0,
+      leucine REAL DEFAULT 0,
+      lysine REAL DEFAULT 0,
+      methionine REAL DEFAULT 0,
+      phenylalanine REAL DEFAULT 0,
+      threonine REAL DEFAULT 0,
+      tryptophan REAL DEFAULT 0,
+      valine REAL DEFAULT 0,
+      alanine REAL DEFAULT 0,
+      arginine REAL DEFAULT 0,
+      asparticAcid REAL DEFAULT 0,
+      glutamicAcid REAL DEFAULT 0,
+      glycine REAL DEFAULT 0,
+      proline REAL DEFAULT 0,
+      serine REAL DEFAULT 0,
+      tyrosine REAL DEFAULT 0,
+      cysteine REAL DEFAULT 0,
+      glutamine REAL DEFAULT 0,
+      asparagine REAL DEFAULT 0,
+      createdAt TEXT NOT NULL
+    )
+''');
+
+// Después del CREATE TABLE custom_foods
+await db.execute('''
+  INSERT INTO custom_foods (
+    id, emoji, name, fullName, calories, proteins, carbohydrates,
+    fiber, totalSugars, totalFats, saturatedFats, omega3, omega6, omega9,
+    calcium, iron, magnesium, phosphorus, potassium, sodium, zinc,
+    copper, manganese, selenium, iodine, molybdenum, chromium, fluorine,
+    vitaminA, vitaminC, vitaminD, vitaminE, vitaminK, vitaminB1, vitaminB2,
+    vitaminB3, vitaminB4, vitaminB5, vitaminB6, vitaminB7, vitaminB9, vitaminB12,
+    histidine, isoleucine, leucine, lysine, methionine, phenylalanine,
+    threonine, tryptophan, valine, alanine, arginine, asparticAcid,
+    glutamicAcid, glycine, proline, serine, tyrosine, cysteine,
+    glutamine, asparagine, createdAt
+  ) VALUES (
+    9999, '🔒', '__RESERVED__', 'Separador de IDs', 
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, datetime('now')
+  )
+''');
+
+
   }
 
   Future<Map<int, int>> getFoodUsageCounts() async {
@@ -270,6 +362,86 @@ class DatabaseService {
     )
   ''');
     }
+    // 👇 AGREGAR ESTO:
+    if (oldVersion < 14) {
+      await db.execute('ALTER TABLE foods ADD COLUMN alanine REAL DEFAULT 0');
+      await db.execute('ALTER TABLE foods ADD COLUMN arginine REAL DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE foods ADD COLUMN aspartic_acid REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE foods ADD COLUMN glutamic_acid REAL DEFAULT 0',
+      );
+      await db.execute('ALTER TABLE foods ADD COLUMN glycine REAL DEFAULT 0');
+      await db.execute('ALTER TABLE foods ADD COLUMN proline REAL DEFAULT 0');
+      await db.execute('ALTER TABLE foods ADD COLUMN serine REAL DEFAULT 0');
+      await db.execute('ALTER TABLE foods ADD COLUMN tyrosine REAL DEFAULT 0');
+    }
+    if (oldVersion < 15) {
+      await db.execute('ALTER TABLE foods ADD COLUMN cysteine REAL DEFAULT 0');
+      await db.execute('ALTER TABLE foods ADD COLUMN glutamine REAL DEFAULT 0');
+      await db.execute(
+        'ALTER TABLE foods ADD COLUMN asparagine REAL DEFAULT 0',
+      );
+    }
+
+    if (oldVersion < 16) {
+      // Agregar aminoácidos no esenciales a custom_foods
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN alanine REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN arginine REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN asparticAcid REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN glutamicAcid REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN glycine REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN proline REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN serine REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN tyrosine REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN cysteine REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN glutamine REAL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE custom_foods ADD COLUMN asparagine REAL DEFAULT 0',
+      );
+
+      // Insertar registro dummy en ID 9999 para forzar AUTOINCREMENT desde 10000
+      await db.execute('''
+    INSERT OR IGNORE INTO custom_foods (
+      id, emoji, name, fullName, calories, proteins, carbohydrates,
+      fiber, totalSugars, totalFats, saturatedFats, omega3, omega6, omega9,
+      calcium, iron, magnesium, phosphorus, potassium, sodium, zinc,
+      copper, manganese, selenium, iodine, molybdenum, chromium, fluorine,
+      vitaminA, vitaminC, vitaminD, vitaminE, vitaminK, vitaminB1, vitaminB2,
+      vitaminB3, vitaminB4, vitaminB5, vitaminB6, vitaminB7, vitaminB9, vitaminB12,
+      histidine, isoleucine, leucine, lysine, methionine, phenylalanine,
+      threonine, tryptophan, valine, alanine, arginine, asparticAcid,
+      glutamicAcid, glycine, proline, serine, tyrosine, cysteine,
+      glutamine, asparagine, createdAt
+    ) VALUES (
+      9999, '🔒', '__RESERVED__', 'Separador de IDs', 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, datetime('now')
+    )
+  ''');
+    }
   }
 
   // Obtener todos los hábitos habilitados
@@ -280,18 +452,26 @@ class DatabaseService {
   }
 
   // Registrar un hábito completado
-  Future<void> logHabit(int habitId, String? detail) async {
+  Future<void> logHabit(
+    int habitId,
+    String? detail, {
+    DateTime? date,
+    DateTime? timestamp,
+  }) async {
     final db = await database;
     final now = DateTime.now();
+    final logDate = date ?? now;
+    final logTimestamp = timestamp ?? now;
+
     await db.insert('habit_logs', {
       'habitId': habitId,
       'date': DateTime(
-        now.year,
-        now.month,
-        now.day,
+        logDate.year,
+        logDate.month,
+        logDate.day,
       ).toIso8601String().split('T')[0],
       'detail': detail,
-      'timestamp': now.toIso8601String(),
+      'timestamp': logTimestamp.toIso8601String(),
     });
   }
 
@@ -577,157 +757,64 @@ class DatabaseService {
     await db.delete('recipes', where: 'id = ?', whereArgs: [recipeId]);
   }
 
-  Future<DashboardStats> getDashboardStats(
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
+  // en storage service
+
+  /// Obtener TODAS las entradas históricas (para sincronización)
+  Future<List<FoodEntry>> getAllEntries() async {
     final db = await database;
 
-    // Obtener todas las entradas del período
-    final entries = await db.query(
+    final List<Map<String, dynamic>> maps = await db.query(
       'history',
-      where: 'timestamp >= ? AND timestamp < ?',
-      whereArgs: [
-        startDate.toIso8601String(),
-        endDate.add(const Duration(days: 1)).toIso8601String(),
-      ],
+      orderBy: 'timestamp DESC',
     );
 
-    // Agrupar por día
-    Map<String, List<Map<String, dynamic>>> entriesByDay = {};
-    for (var entry in entries) {
-      final date = DateTime.parse(entry['timestamp'] as String);
-      final dateKey = DateTime(
-        date.year,
-        date.month,
-        date.day,
-      ).toIso8601String().split('T')[0];
-      entriesByDay.putIfAbsent(dateKey, () => []).add(entry);
-    }
+    List<FoodEntry> entries = [];
+    for (var map in maps) {
+      var food = FoodRepository().getFoodById(map['foodId']);
 
-    // Calcular datos diarios
-    List<DailyData> dailyData = [];
-    double totalCalories = 0;
-    double totalProtein = 0;
-    double totalCarbs = 0;
-    double totalFat = 0;
-
-    final foodRepo = FoodRepository();
-
-    for (var dateKey in entriesByDay.keys) {
-      double dayCalories = 0;
-      double dayProtein = 0; // Agregar
-      double dayCarbs = 0; // Agregar
-      double dayFat = 0; // Agregar
-
-      for (var entry in entriesByDay[dateKey]!) {
-        final food = foodRepo.getFoodById(entry['foodId'] as int);
-        if (food != null) {
-          final grams = entry['grams'] as double;
-          final scale = grams / 100;
-          dayCalories += food.calories * scale;
-          dayProtein +=
-              food.proteins * scale; // Cambiar totalProtein por dayProtein
-          dayCarbs +=
-              food.carbohydrates * scale; // Cambiar totalCarbs por dayCarbs
-          dayFat += food.totalFats * scale; // Cambiar totalFat por dayFat
-        }
+      if ((map['isSupplement'] ?? 0) == 1) {
+        food = supplementsList.firstWhere(
+          (s) => s.id == map['foodId'],
+          orElse: () => FoodRepository().getFoodById(map['foodId'])!,
+        );
+      } else {
+        food = FoodRepository().getFoodById(map['foodId']);
       }
-
-      totalCalories += dayCalories;
-      totalProtein += dayProtein; // Agregar
-      totalCarbs += dayCarbs; // Agregar
-      totalFat += dayFat; // Agregar
-
-      dailyData.add(
-        DailyData(
-          date: DateTime.parse(dateKey),
-          calories: dayCalories,
-          protein: dayProtein,
-          carbs: dayCarbs,
-          fat: dayFat,
-        ),
-      );
-    }
-
-    final daysCount = entriesByDay.length > 0 ? entriesByDay.length : 1;
-
-    // Top alimentos
-    Map<int, TopFood> foodStats = {};
-    for (var entry in entries) {
-      final foodId = entry['foodId'] as int;
-      final grams = entry['grams'] as double;
-      final food = foodRepo.getFoodById(foodId);
 
       if (food != null) {
-        if (foodStats.containsKey(foodId)) {
-          foodStats[foodId] = TopFood(
-            name: food.name,
-            fullName: food.fullName ?? food.name,
-            emoji: food.emoji,
-            timesConsumed: foodStats[foodId]!.timesConsumed + 1,
-            totalGrams: foodStats[foodId]!.totalGrams + grams,
-          );
-        } else {
-          foodStats[foodId] = TopFood(
-            name: food.name,
-            fullName: food.fullName ?? food.name,
-            emoji: food.emoji,
-            timesConsumed: 1,
-            totalGrams: grams,
-          );
-        }
+        entries.add(
+          FoodEntry(
+            id: map['id'],
+            food: food,
+            grams: map['grams'],
+            timestamp: DateTime.parse(map['timestamp']),
+            isSupplement: (map['isSupplement'] ?? 0) == 1,
+            supplementDose: map['supplementDose'],
+          ),
+        );
       }
     }
 
-    final topFoods = foodStats.values.toList()
-      ..sort((a, b) => b.timesConsumed.compareTo(a.timesConsumed))
-      ..take(5).toList();
+    return entries;
+  }
 
-    // Completitud de hábitos
-    final habits = await db.query('habits');
-    Map<String, int> habitCompletion = {};
+  /// Obtener todos los logs de hábitos
+  Future<List<HabitLog>> getAllHabitLogs() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('habit_logs');
+    return maps.map((map) => HabitLog.fromMap(map)).toList();
+  }
 
-    for (var habit in habits) {
-      final habitId = habit['id'] as int;
-      final habitName = habit['name'] as String;
-
-      final logs = await db.query(
-        'habit_logs',
-        where: 'habitId = ? AND timestamp >= ? AND timestamp < ?',
-        whereArgs: [
-          habitId,
-          startDate.toIso8601String(),
-          endDate.add(const Duration(days: 1)).toIso8601String(),
-        ],
-      );
-
-      // Contar días únicos
-      final uniqueDays = logs
-          .map((log) {
-            final date = DateTime.parse(log['timestamp'] as String);
-            return DateTime(
-              date.year,
-              date.month,
-              date.day,
-            ).toIso8601String().split('T')[0];
-          })
-          .toSet()
-          .length;
-
-      habitCompletion[habitName] = uniqueDays;
-    }
-
-    return DashboardStats(
-      startDate: startDate,
-      endDate: endDate,
-      avgCalories: totalCalories / daysCount,
-      avgProtein: totalProtein / daysCount,
-      avgCarbs: totalCarbs / daysCount,
-      avgFat: totalFat / daysCount,
-      dailyData: dailyData,
-      topFoods: topFoods,
-      habitCompletion: habitCompletion,
+  /// Obtener un hábito por ID (helper)
+  Future<Habit?> getHabitById(int id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'habits',
+      where: 'id = ?',
+      whereArgs: [id],
     );
+
+    if (maps.isEmpty) return null;
+    return Habit.fromMap(maps.first);
   }
 }

@@ -18,10 +18,18 @@ class NutrientProgressRow extends StatelessWidget {
     required this.goal,
   });
 
+  // Función helper para formatear valores con precisión adecuada
+  String _formatValue(double val) {
+    if (val < 10.0) {
+      return val.toStringAsFixed(2); // 2 decimales para valores < 10
+    } else {
+      return val.toStringAsFixed(0); // Sin decimales para valores >= 10
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Lógica para calcular el progreso (de 0.0 a 1.0)
-    // Se asegura de no dividir por cero y de que no supere el 100% para la barra.
     final double progress = (goal > 0) ? (value / goal).clamp(0.0, 1.0) : 0.0;
 
     // Lógica para determinar el color de la barra
@@ -57,7 +65,7 @@ class NutrientProgressRow extends StatelessWidget {
                 ),
               ),
               Text(
-                "${value.toStringAsFixed(1)} / ${goal.toStringAsFixed(0)} $unit ($type)",
+                "${_formatValue(value)} / ${_formatValue(goal)} $unit ($type)",
                 style: const TextStyle(fontSize: 15, color: Colors.grey),
               ),
             ],

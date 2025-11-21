@@ -1,5 +1,8 @@
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -30,9 +33,9 @@ android {
     defaultConfig {
         applicationId = "com.arielaco.acofood"
         minSdk = flutter.minSdkVersion
-        targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        targetSdk = 35
+        versionCode = 25
+        versionName = "1.4.1"
     }
 
 signingConfigs {

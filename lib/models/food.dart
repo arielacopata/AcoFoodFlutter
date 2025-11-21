@@ -28,6 +28,9 @@ class Food {
   final double manganese;
   final double selenium;
   final double iodine;
+  final double molybdenum; // ← Debe existir
+  final double chromium; // ← Debe existir
+  final double fluorine; // ← Debe existir
   final double vitaminA;
   final double vitaminC;
   final double vitaminE;
@@ -41,7 +44,7 @@ class Food {
   final double vitaminB7;
   final double vitaminB9;
   final double vitaminB12;
-  final double vitaminD; 
+  final double vitaminD;
 
   // --- AMINOÁCIDOS ESENCIALES ---
   final double histidine;
@@ -53,6 +56,19 @@ class Food {
   final double threonine;
   final double tryptophan;
   final double valine;
+
+  // --- AMINOÁCIDOS NO ESENCIALES ---
+  final double alanine;
+  final double arginine;
+  final double asparticAcid;
+  final double glutamicAcid;
+  final double glycine;
+  final double proline;
+  final double serine;
+  final double tyrosine;
+  final double cysteine;
+  final double glutamine;
+  final double asparagine;
 
   Food({
     this.id,
@@ -80,6 +96,9 @@ class Food {
     this.manganese = 0,
     this.selenium = 0,
     this.iodine = 0,
+    this.molybdenum = 0, // ← SÍ, esto
+    this.chromium = 0, // ← SÍ, esto
+    this.fluorine = 0, // ← SÍ, esto
     this.vitaminA = 0,
     this.vitaminC = 0,
     this.vitaminE = 0,
@@ -93,7 +112,7 @@ class Food {
     this.vitaminB7 = 0,
     this.vitaminB9 = 0,
     this.vitaminB12 = 0,
-    this.vitaminD = 0,  
+    this.vitaminD = 0,
     this.histidine = 0,
     this.isoleucine = 0,
     this.leucine = 0,
@@ -103,6 +122,17 @@ class Food {
     this.threonine = 0,
     this.tryptophan = 0,
     this.valine = 0,
+    this.alanine = 0.0,
+    this.arginine = 0.0,
+    this.asparticAcid = 0.0,
+    this.glutamicAcid = 0.0,
+    this.glycine = 0.0,
+    this.proline = 0.0,
+    this.serine = 0.0,
+    this.tyrosine = 0.0,
+    this.cysteine = 0,
+    this.glutamine = 0,
+    this.asparagine = 0,
   });
 
   // Factory para construir un Food desde los datos de foods.dart
@@ -142,6 +172,9 @@ class Food {
       manganese: _toDouble(nutrients["Manganeso"]),
       selenium: _toDouble(nutrients["Selenio"]),
       iodine: _toDouble(nutrients["Yodo"]),
+      molybdenum: _toDouble(nutrients['Molibdeno']), // ← Ya está
+      chromium: _toDouble(nutrients['Cromo']), // ← Ya está
+      fluorine: _toDouble(nutrients['Flúor']), // ← Ya está
       vitaminA: _toDouble(nutrients["Vitamina A"]),
       vitaminC: _toDouble(nutrients["Vitamina C"]),
       vitaminE: _toDouble(nutrients["Vitamina E"]),
@@ -155,7 +188,7 @@ class Food {
       vitaminB7: _toDouble(nutrients["Vitamina B7 (Biotina)"]),
       vitaminB9: _toDouble(nutrients["Vitamina B9 (Folato)"]),
       vitaminB12: _toDouble(nutrients["Vitamina B12"]),
-      vitaminD: _toDouble(nutrients["Vitamina D"]),  
+      vitaminD: _toDouble(nutrients["Vitamina D"]),
       histidine: _toDouble(nutrients["Histidina"]),
       isoleucine: _toDouble(nutrients["Isoleucina"]),
       leucine: _toDouble(nutrients["Leucina"]),
@@ -165,6 +198,17 @@ class Food {
       threonine: _toDouble(nutrients["Treonina"]),
       tryptophan: _toDouble(nutrients["Triptófano"]),
       valine: _toDouble(nutrients["Valina"]),
+      alanine: _toDouble(nutrients["Alanina"]),
+      arginine: _toDouble(nutrients["Arginina"]),
+      asparticAcid: _toDouble(nutrients["Ácido aspártico"]),
+      glutamicAcid: _toDouble(nutrients["Ácido glutámico"]),
+      glycine: _toDouble(nutrients["Glicina"]),
+      proline: _toDouble(nutrients["Prolina"]),
+      serine: _toDouble(nutrients["Serina"]),
+      tyrosine: _toDouble(nutrients["Tirosina"]),
+      cysteine: _toDouble(nutrients["Cisteína"]),
+      glutamine: _toDouble(nutrients["Glutamina"]),
+      asparagine: _toDouble(nutrients["Asparagina"]),
     );
   }
 }

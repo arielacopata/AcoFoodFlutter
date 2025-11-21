@@ -1,6 +1,6 @@
 {
-    "name": "acofood2",
-    "short_name": "acofood2",
+    "name": "AcoFood",
+    "short_name": "AcoFood",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

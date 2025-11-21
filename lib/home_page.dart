@@ -1,9 +1,11 @@
 import 'package:acofoodflutter/models/food.dart';
 import 'package:flutter/material.dart';
 import 'models/user_profile.dart';
-import 'services/database_service.dart';
+import 'services/storage_factory.dart';
 
 import 'dart:async';
+import 'dart:convert';
+
 import 'models/food_entry.dart';
 import 'models/food_group.dart';
 import 'data/food_groups.dart';
@@ -33,9 +35,11 @@ import 'package:file_picker/file_picker.dart';
 import 'services/import_service.dart';
 import 'models/recipe.dart';
 import 'dart:io';
+import 'services/firestore_storage_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 final StreamController<double> _weightController = StreamController.broadcast();
-bool _isScaleConnected = false; // Agregar esta variabl
+bool _isScaleConnected = false;
 
 class HomePage extends StatefulWidget {
   final UserProfile profile;
@@ -55,24 +59,32 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _searchQuery = "";
+  final TextEditingController _searchController =
+      TextEditingController(); // 👈 AGREGAR
   double _weight = 0.0;
   double _tareWeight = 0.0;
   bool _scaleExpanded = false;
   bool _isSearchFocused = false;
+  bool _showBottomContent = true; // Controla cuándo mostrar macros/historial
+
   // Variables para recordatorios
   bool _b12Completed = false;
   bool _linoCompleted = false;
   bool _legumbresCompleted = false;
+  bool _yodoCompleted = false;
 
   bool _b12Enabled = true;
   bool _linoEnabled = true;
   bool _legumbresEnabled = true;
+  bool _yodoEnabled = true;
+
   String _sortOrder = 'alfabetico';
   Map<int, int> _foodUsageCounts = {};
   DateTime _selectedDate = DateTime.now();
-  bool _isListView = false; // false = grilla, true = lista
-  final FocusNode _searchFocusNode = FocusNode(); // <-- Agrega esto
-  // Peso neto (siempre positivo para tu caso de uso)
+  bool _isListView = false;
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isTodayFasting = false; // Flag para día de ayuno
+
   double get _netWeight => (_weight - _tareWeight).abs();
 
   List<FoodEntry> _history = [];
@@ -85,53 +97,89 @@ class _HomePageState extends State<HomePage> {
   final NutritionCalculator _calculator = NutritionCalculator();
   NutritionReport? _currentReport;
 
+  // Función para normalizar strings (quitar acentos)
+  String _normalizeString(String text) {
+    const withAccents = 'áéíóúàèìòùäëïöüâêîôûãõñçÁÉÍÓÚÀÈÌÒÙÄËÏÖÜÂÊÎÔÛÃÕÑÇ';
+    const withoutAccents = 'aeiouaeiouaeiouaeiouaoncAEIOUAEIOUAEIOUAEIOUAONC';
+
+    String normalized = text.toLowerCase();
+    for (int i = 0; i < withAccents.length; i++) {
+      normalized = normalized.replaceAll(withAccents[i], withoutAccents[i]);
+    }
+    return normalized;
+  }
+
   @override
   void initState() {
     super.initState();
+    initializeDateFormatting('es'); // Inicializar formato de fechas en español
     _buildDisplayGroups();
     _loadHistory();
     _loadDailyReminders();
     _loadSortOrder();
-    // 1. AÑADE un "oyente" al foco del buscador
+    _checkIfTodayIsFasting();
     _searchFocusNode.addListener(_onSearchFocusChange);
+  }
+
+  Future<void> _checkIfTodayIsFasting() async {
+    final isFasting = await StorageFactory.instance.isFastingDay(_selectedDate);
+    setState(() {
+      _isTodayFasting = isFasting;
+    });
+  }
+
+  Future<void> _toggleFastingDay() async {
+    if (_isTodayFasting) {
+      await StorageFactory.instance.unmarkFastingDay(_selectedDate);
+    } else {
+      await StorageFactory.instance.markFastingDay(_selectedDate);
+    }
+    await _checkIfTodayIsFasting();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isTodayFasting
+                ? 'Día marcado como ayuno'
+                : 'Día desmarcado como ayuno',
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _loadSortOrder() async {
     final prefs = await SharedPreferences.getInstance();
-    final counts = await DatabaseService.instance.getFoodUsageCounts();
+    final counts = await StorageFactory.instance.getFoodUsageCounts();
     setState(() {
       _sortOrder = prefs.getString('sort_order') ?? 'alfabetico';
       _foodUsageCounts = counts;
     });
-    _buildDisplayGroups(); // Reconstruir con el nuevo orden
+    _buildDisplayGroups();
   }
 
   Future<bool?> _openSupplementSheet(Food supplement) async {
-    _searchFocusNode.unfocus();
-
     final result = await showModalBottomSheet<Map<String, dynamic>?>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _buildSupplementModal(supplement),
     );
 
-    //print('DEBUG: result = $result'); // 👈 AGREGAR
+    // Cerrar teclado DESPUÉS de cerrar el modal
+    _searchFocusNode.unfocus();
 
     if (result != null && result['dose'] != null) {
       final entry = FoodEntry(
         food: supplement,
-        grams: 0,
+        grams: result['grams'] ?? 0,
         isSupplement: true,
         supplementDose: result['dose'],
       );
 
-      //print(        'DEBUG: Guardando entry: ${entry.food.name}, dosis: ${entry.supplementDose}, isSupplement: ${entry.isSupplement}',      ); // 👈 AGREGAR
-
-      await DatabaseService.instance.createEntry(entry);
-
-      //print('DEBUG: Entry guardado, recargando historial'); // 👈 AGREGAR
-
-      _loadHistory();
+      await StorageFactory.instance.createEntry(entry);
+      await _loadHistory();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -144,8 +192,6 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildSupplementModal(Food supplement) {
-    final doseController = TextEditingController();
-
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -158,7 +204,6 @@ class _HomePageState extends State<HomePage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     Text(
@@ -177,7 +222,6 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Si es B12, mostrar botones rápidos
                 if (supplement.id == 9001) ...[
                   const Text(
                     'Dosis común:',
@@ -190,14 +234,17 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       _quickDoseButton(context, '500 mcg'),
                       _quickDoseButton(context, '1000 mcg'),
-                      _quickDoseButton(context, '3500 mcg'),
+                      _quickDoseButton(context, '2500 mcg'),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '💡 1 pastilla = 1000-2500 mcg normalmente',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                 ],
 
-                if (supplement.id == 9004) ...[
+                if (supplement.id == 9002) ...[
                   const Text(
                     'Dosis común:',
                     style: TextStyle(fontWeight: FontWeight.w600),
@@ -207,9 +254,31 @@ class _HomePageState extends State<HomePage> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
+                      _quickDoseButton(context, '1000 UI'),
+                      _quickDoseButton(context, '2000 UI'),
+                      _quickDoseButton(context, '4000 UI'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '☀️ 1000 UI = 25 mcg',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+
+                if (supplement.id == 9004) ...[
+                  const Text(
+                    '30 mcg ≈ 1g sal 🧂 | ⚠️ Límite: 1100 mcg/día',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _quickDoseButton(context, '130 mcg'),
                       _quickDoseButton(context, '150 mcg'),
                       _quickDoseButton(context, '225 mcg'),
-                      _quickDoseButton(context, '325 mcg'),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -217,38 +286,7 @@ class _HomePageState extends State<HomePage> {
                     '⚠️ Límite seguro: 1100 mcg/día',
                     style: TextStyle(fontSize: 12, color: Colors.orange),
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
                 ],
-
-                // Input libre
-                const Text(
-                  'Dosis personalizada:',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: doseController,
-                        decoration: const InputDecoration(
-                          hintText: 'Ej: 2 cápsulas, 2000 UI',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (doseController.text.isNotEmpty) {
-                          Navigator.pop(context, {'dose': doseController.text});
-                        }
-                      },
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
               ],
             ),
           ),
@@ -258,13 +296,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _quickDoseButton(BuildContext context, String dose) {
+    double grams;
+
+    if (dose.contains('UI')) {
+      final uiMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+      final ui = uiMatch != null ? double.parse(uiMatch.group(1)!) : 0;
+      grams = ui / 1000.0;
+    } else if (dose.contains('mcg')) {
+      final mcgMatch = RegExp(r'(\d+(?:\.\d+)?)').firstMatch(dose);
+      final mcg = mcgMatch != null ? double.parse(mcgMatch.group(1)!) : 0;
+
+      if (mcg >= 500) {
+        grams = mcg / 1000.0;
+      } else {
+        grams = mcg / 150.0;
+      }
+    } else {
+      grams = 0;
+    }
+
     return ElevatedButton(
-      onPressed: () => Navigator.pop(context, {'dose': dose}),
+      onPressed: () => Navigator.pop(context, {'dose': dose, 'grams': grams}),
       child: Text(dose),
     );
   }
 
-  /// Importar backup desde archivo JSON
   Future<void> _importBackup() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -313,22 +369,20 @@ class _HomePageState extends State<HomePage> {
       final success = await ImportService.importFromJson(jsonContent);
 
       if (!mounted) return;
-      Navigator.pop(context); // Cerrar loading
+      Navigator.pop(context);
 
       if (success) {
-        // 🔥 AGREGAR: Recargar perfil desde BD
-        final newProfile = await DatabaseService.instance.getUserProfile();
+        final newProfile = await StorageFactory.instance.getUserProfile();
         if (newProfile != null) {
-          widget.onUpdateProfile(newProfile); // Actualizar perfil en el padre
+          widget.onUpdateProfile(newProfile);
         }
 
-        // Recargar todo lo demás
         await _loadHistory();
         await _loadDailyReminders();
         await _loadSortOrder();
         _buildDisplayGroups();
 
-        setState(() {}); // Forzar rebuild
+        setState(() {});
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -358,9 +412,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Mostrar modal de In/Out
-  // REEMPLAZA el método _showInOutModal() completo en home_page.dart:
-
   void _showInOutModal() {
     showModalBottomSheet(
       context: context,
@@ -371,7 +422,6 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -387,7 +437,6 @@ class _HomePageState extends State<HomePage> {
             ),
             const SizedBox(height: 16),
 
-            // SECCIÓN EXPORTAR
             const Text(
               'EXPORTAR DATOS DEL DÍA',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -415,7 +464,6 @@ class _HomePageState extends State<HomePage> {
             const Divider(),
             const SizedBox(height: 16),
 
-            // SECCIÓN IMPORTAR
             const Text(
               'IMPORTAR DATOS',
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
@@ -423,8 +471,8 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: () async {
-                Navigator.pop(context); // Cerrar el modal primero
-                await _importBackup(); // Ejecutar la importación
+                Navigator.pop(context);
+                await _importBackup();
               },
               icon: const Icon(Icons.upload_file),
               label: const Text('Restaurar desde Archivo'),
@@ -446,120 +494,140 @@ class _HomePageState extends State<HomePage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => FutureBuilder<List<Habit>>(
-        future: DatabaseService.instance.getAllHabits(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      builder: (context) => SizedBox(
+        height: MediaQuery.of(context).size.height * 0.4,
+        child: FutureBuilder<List<Habit>>(
+          future: StorageFactory.instance.getAllHabits(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          return Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Configurar tareas',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Configurar tareas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, size: 20),
-                          onPressed: () {
-                            Navigator.pop(context);
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              builder: (context) => HabitsModal(
-                                onSettingsTap: _showHabitsSettings,
-                              ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back, size: 20),
+                            onPressed: () {
+                              Navigator.pop(context);
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                builder: (context) => SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.35,
+                                  child: HabitsModal(
+                                    onSettingsTap: _showHabitsSettings,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView(
+                      children: snapshot.data!.map((habit) {
+                        return CheckboxListTile(
+                          secondary: Text(
+                            habit.emoji ?? '',
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                          title: Text(habit.name),
+                          value: habit.enabled,
+                          onChanged: (value) async {
+                            await StorageFactory.instance.updateHabitEnabled(
+                              habit.id!,
+                              value ?? true,
                             );
+                            Navigator.pop(context);
+                            _showHabitsSettings();
                           },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
+                        );
+                      }).toList(),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                ...snapshot.data!.map((habit) {
-                  return CheckboxListTile(
-                    secondary: Text(
-                      habit.emoji ?? '',
-                      style: const TextStyle(fontSize: 24),
-                    ),
-                    title: Text(habit.name),
-                    value: habit.enabled,
-                    onChanged: (value) async {
-                      await DatabaseService.instance.updateHabitEnabled(
-                        habit.id!,
-                        value ?? true,
-                      );
-                      Navigator.pop(context);
-                      _showHabitsSettings();
-                    },
-                  );
-                }),
-              ],
-            ),
-          );
-        },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   Future<void> _loadDailyReminders() async {
     final prefs = await SharedPreferences.getInstance();
-    final todayKey = _getTodayKey(); // 👈 Usar el mismo método
+    final todayKey = _getTodayKey();
 
     setState(() {
-      // Estados diarios (se resetean)
-      _b12Completed =
-          prefs.getBool('b12_completed_$todayKey') ??
-          false; // 👈 Agregar _completed
+      _b12Completed = prefs.getBool('b12_completed_$todayKey') ?? false;
       _linoCompleted = prefs.getBool('lino_completed_$todayKey') ?? false;
       _legumbresCompleted =
           prefs.getBool('legumbres_completed_$todayKey') ?? false;
+      _yodoCompleted = prefs.getBool('yodo_completed_$todayKey') ?? false;
 
-      // Estados habilitados (permanentes)
       _b12Enabled = prefs.getBool('b12_enabled') ?? true;
       _linoEnabled = prefs.getBool('lino_enabled') ?? true;
       _legumbresEnabled = prefs.getBool('legumbres_enabled') ?? true;
+      _yodoEnabled = prefs.getBool('yodo_enabled') ?? true;
     });
   }
 
   void _toggleReminder(String key) async {
     if (key == 'b12') {
-      // Abrir modal de B12 en lugar de solo marcar como completado
       final b12Supplement = supplementsList.firstWhere((s) => s.id == 9001);
-      final wasRegistered = await _openSupplementSheet(
-        b12Supplement,
-      ); // 👈 Declarar acá
-      // Marcar como completado
-      // Solo marcar como completado SI se registró
+      final wasRegistered = await _openSupplementSheet(b12Supplement);
+
       if (wasRegistered == true) {
-        // 👈 CAMBIAR
         setState(() => _b12Completed = true);
         final prefs = await SharedPreferences.getInstance();
         final todayKey = _getTodayKey();
         await prefs.setBool('b12_completed_$todayKey', true);
       }
+    } else if (key == 'yodo') {
+      final yodoSupplement = supplementsList.firstWhere((s) => s.id == 9004);
+      final wasRegistered = await _openSupplementSheet(yodoSupplement);
+      if (wasRegistered == true) {
+        setState(() => _yodoCompleted = true);
+        final prefs = await SharedPreferences.getInstance();
+        final todayKey = _getTodayKey();
+        await prefs.setBool('yodo_completed_$todayKey', true);
+      }
     } else if (key == 'lino') {
-      setState(() => _linoCompleted = true);
-      final prefs = await SharedPreferences.getInstance();
-      final todayKey = _getTodayKey();
-      await prefs.setBool('lino_completed_$todayKey', true);
+      // Abrir sheet de Semillas de lino (ID: 30)
+      final linoFood = FoodRepository().getFoodById(30);
+
+      if (linoFood != null) {
+        await _openFoodBottomSheet(linoFood);
+
+        // Marcar como completado (registres o no)
+        setState(() => _linoCompleted = true);
+        final prefs = await SharedPreferences.getInstance();
+        final todayKey = _getTodayKey();
+        await prefs.setBool('lino_completed_$todayKey', true);
+      }
     } else if (key == 'legumbres') {
       setState(() => _legumbresCompleted = true);
       final prefs = await SharedPreferences.getInstance();
@@ -575,6 +643,9 @@ class _HomePageState extends State<HomePage> {
     if (!_b12Completed && _b12Enabled) {
       currentReminder = '💊 Recordatorio: Tomar B12';
       reminderKey = 'b12';
+    } else if (!_yodoCompleted && _yodoEnabled) {
+      currentReminder = '🧪 Recordatorio: Tomar Yodo';
+      reminderKey = 'yodo';
     } else if (!_linoCompleted && _linoEnabled) {
       currentReminder = '🌾 Recordatorio: Semillas de lino';
       reminderKey = 'lino';
@@ -619,148 +690,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // AGREGAR esta función en home_page.dart, cerca de las otras funciones de modales
-
-  /// Modal para registrar Yodo
-  Future<void> _showIodineModal() async {
-    final TextEditingController doseController = TextEditingController();
-
-    final result = await showModalBottomSheet<Map<String, dynamic>?>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 24,
-          right: 24,
-          top: 24,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  '🧂 Yodo (suplemento)',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Dosis del suplemento',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-
-            // Botones de dosis predefinidas
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '150 mcg'}),
-                    child: const Text('150 mcg'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '225 mcg'}),
-                    child: const Text('225 mcg'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () =>
-                        Navigator.pop(context, {'dose': '325 mcg'}),
-                    child: const Text('325 mcg'),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-            const Divider(),
-            const SizedBox(height: 8),
-
-            // Input personalizado
-            const Text(
-              'O ingresa una dosis personalizada:',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: doseController,
-                    keyboardType: TextInputType.text,
-                    decoration: const InputDecoration(
-                      hintText: 'Ej: 400 mcg, 2000 UI',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    if (doseController.text.isNotEmpty) {
-                      Navigator.pop(context, {'dose': doseController.text});
-                    }
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-            const Text(
-              '⚠️ Límite seguro: 1100 mcg/día',
-              style: TextStyle(fontSize: 11, color: Colors.orange),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-
-    // Si se seleccionó una dosis, registrarla
-    if (result != null && result['dose'] != null) {
-      final iodineFood = supplementsList.firstWhere((s) => s.id == 9004);
-      final entry = FoodEntry(
-        food: iodineFood,
-        grams: 0, // Los suplementos no tienen gramos
-        isSupplement: true,
-        supplementDose: result['dose'],
-      );
-
-      await DatabaseService.instance.createEntry(entry);
-      _loadHistory();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Yodo registrado: ${result['dose']}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
-  // Exportar como texto
   Future<void> _exportAsText() async {
     final text = ExportService.generateTextForZepp(_history);
     await ExportService.copyToClipboard(text);
@@ -776,11 +705,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Exportar como JSON
-  // Elimina el import de file_picker
-  // import 'package:file_picker/file_picker.dart';  // ← ELIMINA
-
-  // Modifica _exportAsJson para usar share en lugar de guardar
   Future<void> _exportAsJson() async {
     try {
       final jsonContent = await ExportService.generateJsonBackup(_history);
@@ -801,12 +725,7 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Elimina el método _importFromFile por ahora
-  // (lo agregaremos más tarde con otra solución)
-
-  // Función para mostrar información nutricional completa
   Future<void> _showNutritionInfo(FoodEntry entry) async {
-    // Calculamos los valores para la cantidad específica
     final double factor = entry.grams / 100;
 
     await showDialog(
@@ -865,7 +784,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget helper para mostrar filas de información nutricional
   Widget _nutritionRow(String label, String value, String unit) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -882,7 +800,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Función para editar la cantidad de un entry
   Future<void> _editEntry(FoodEntry entry) async {
     final newGrams = await showModalBottomSheet<double?>(
       context: context,
@@ -897,16 +814,19 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (newGrams != null && newGrams > 0) {
-      // Actualizar el entry existente con la nueva cantidad
       final updatedEntry = FoodEntry(
         id: entry.id,
+        firestoreDocId: entry.firestoreDocId,
         food: entry.food,
         grams: newGrams,
-        timestamp: entry.timestamp, // Mantiene el timestamp original
+        timestamp: entry.timestamp,
       );
-
-      await DatabaseService.instance.updateEntry(updatedEntry);
-      _loadHistory(); // Recarga el historial
+      print('📝 Editando entry...');
+      await StorageFactory.instance.updateEntry(updatedEntry);
+      print('✅ Entry actualizado');
+      await _loadHistory();
+      print('🔄 Historial recargado. Entries: ${_history.length}');
+      setState(() {});
 
       ScaffoldMessenger.of(
         context,
@@ -914,7 +834,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Función para eliminar un entry del historial
   Future<void> _deleteEntry(FoodEntry entry) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -935,65 +854,45 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (confirmed == true) {
-      await DatabaseService.instance.deleteEntry(entry.id!);
-      _loadHistory(); // Recarga el historial
-
+      if (entry.firestoreDocId != null) {
+        // Web - usar Firestore
+        final service = StorageFactory.instance as FirestoreStorageService;
+        await service.deleteEntryByDocId(entry.firestoreDocId!);
+      } else {
+        // Android - usar SQLite
+        await StorageFactory.instance.deleteEntry(entry.id!);
+      }
+      await _loadHistory();
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Registro eliminado')));
     }
   }
 
-  Future<void> _showClearConfirmationDialog() async {
-    final bool? confirmed = await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Confirmar Borrado"),
-        content: const Text(
-          "¿Estás seguro de que quieres borrar todos los registros de hoy? Esta acción no se puede deshacer.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () =>
-                Navigator.of(context).pop(false), // Devuelve 'false' si cancela
-            child: const Text("Cancelar"),
-          ),
-          TextButton(
-            onPressed: () =>
-                Navigator.of(context).pop(true), // Devuelve 'true' si confirma
-            child: const Text("Borrar", style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    // Si el usuario confirmó, procedemos a borrar
-    if (confirmed == true) {
-      await DatabaseService.instance.clearTodayHistory();
-      _loadHistory(); // Recargamos el historial para actualizar la UI
-    }
-  }
-
-  void _previousDay() {
+  Future<void> _previousDay() async {
     setState(() {
       _selectedDate = _selectedDate.subtract(const Duration(days: 1));
     });
-    _loadHistory();
+    await _loadHistory();
   }
 
-  void _nextDay() {
+  Future<void> _nextDay() async {
     final tomorrow = _selectedDate.add(const Duration(days: 1));
-    final today = DateTime.now();
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrowNormalized = DateTime(
+      tomorrow.year,
+      tomorrow.month,
+      tomorrow.day,
+    );
 
-    // No permitir ir más allá de hoy
-    if (tomorrow.isBefore(today) ||
-        tomorrow.year == today.year &&
-            tomorrow.month == today.month &&
-            tomorrow.day == today.day) {
+    // Solo avanzar si tomorrow es hoy o anterior (no permitir fechas futuras)
+    if (tomorrowNormalized.isBefore(today) ||
+        tomorrowNormalized.isAtSameMomentAs(today)) {
       setState(() {
         _selectedDate = tomorrow;
       });
-      _loadHistory();
+      await _loadHistory();
     }
   }
 
@@ -1017,16 +916,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadHistory() async {
-    final entries = await DatabaseService.instance.getEntriesByDate(
+    final entries = await StorageFactory.instance.getEntriesByDate(
       _selectedDate,
     );
     setState(() {
       _history = entries;
     });
-    _recalculateTotals(); // Recalculamos al cargar
+    await _recalculateTotals();
   }
 
-  // 2. SIMPLIFICA este método.
   void _buildDisplayGroups() {
     final allFoods = _foodRepo.getAllFoods();
     setState(() {
@@ -1046,12 +944,21 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  void _onSearchFocusChange() {
-    if (_searchFocusNode.hasFocus && _scaleExpanded) {
-      // Si el buscador gana el foco y el panel está expandido, lo cerramos.
+  void _onSearchFocusChange() async {
+    if (_searchFocusNode.hasFocus) {
+      // Cuando GANA el foco: ocultar contenido inmediatamente
       setState(() {
         _scaleExpanded = false;
+        _showBottomContent = false;
       });
+    } else {
+      // Cuando PIERDE el foco: esperar a que el teclado baje antes de mostrar contenido
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted && !_searchFocusNode.hasFocus) {
+        setState(() {
+          _showBottomContent = true;
+        });
+      }
     }
   }
 
@@ -1065,7 +972,6 @@ class _HomePageState extends State<HomePage> {
       _tareWeight = _weight;
     });
 
-    // Solo mostrar snackbar si la balanza está conectada
     if (_isScaleConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1082,12 +988,59 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  /// Dispara el cálculo de los totales nutricionales basados en el historial.
   Future<void> _recalculateTotals() async {
-    // Si no hay nada en el historial, reseteamos el reporte.
+    // Si no hay nada en el historial, crear un reporte vacío en lugar de null
     if (_history.isEmpty) {
-      setState(() => _currentReport = null);
-      // print("Historial vacío, reporte reseteado.");
+      setState(
+        () => _currentReport = NutritionReport(
+          calories: 0,
+          proteins: 0,
+          carbohydrates: 0,
+          totalFats: 0,
+          fiber: 0,
+          // Todos los demás valores en 0
+          calcium: 0,
+          iron: 0,
+          magnesium: 0,
+          phosphorus: 0,
+          potassium: 0,
+          sodium: 0,
+          zinc: 0,
+          copper: 0,
+          manganese: 0,
+          selenium: 0,
+          iodine: 0,
+          molybdenum: 0,
+          chromium: 0,
+          fluorine: 0,
+          vitaminA: 0,
+          vitaminC: 0,
+          vitaminD: 0,
+          vitaminE: 0,
+          vitaminK: 0,
+          vitaminB1: 0,
+          vitaminB2: 0,
+          vitaminB3: 0,
+          vitaminB4: 0,
+          vitaminB5: 0,
+          vitaminB6: 0,
+          vitaminB7: 0,
+          vitaminB9: 0,
+          vitaminB12: 0,
+          omega3: 0,
+          omega6: 0,
+          omega9: 0,
+          histidine: 0,
+          isoleucine: 0,
+          leucine: 0,
+          lysine: 0,
+          methionine: 0,
+          phenylalanine: 0,
+          threonine: 0,
+          tryptophan: 0,
+          valine: 0,
+        ),
+      );
       return;
     }
 
@@ -1097,23 +1050,190 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _currentReport = report;
     });
+
+    // ⭐ AGREGAR ESTO - Guardar el reporte en SharedPreferences
+    if (report != null) {
+      final prefs = await SharedPreferences.getInstance();
+      final dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final json = {
+        'calories': report.calories,
+        'proteins': report.proteins,
+        'carbohydrates': report.carbohydrates,
+        'totalFats': report.totalFats,
+        'fiber': report.fiber,
+        'omega3': report.omega3,
+        'omega6': report.omega6,
+        'calcium': report.calcium,
+        'iron': report.iron,
+        'magnesium': report.magnesium,
+        'phosphorus': report.phosphorus,
+        'potassium': report.potassium,
+        'sodium': report.sodium,
+        'zinc': report.zinc,
+        'copper': report.copper,
+        'manganese': report.manganese,
+        'selenium': report.selenium,
+        'vitaminA': report.vitaminA,
+        'vitaminC': report.vitaminC,
+        'vitaminE': report.vitaminE,
+        'vitaminK': report.vitaminK,
+        'vitaminB1': report.vitaminB1,
+        'vitaminB2': report.vitaminB2,
+        'vitaminB3': report.vitaminB3,
+        'vitaminB4': report.vitaminB4,
+        'vitaminB5': report.vitaminB5,
+        'vitaminB6': report.vitaminB6,
+        'vitaminB7': report.vitaminB7,
+        'vitaminB9': report.vitaminB9,
+        'vitaminB12': report.vitaminB12,
+        'vitaminD': report.vitaminD,
+        'iodine': report.iodine,
+        'molybdenum': report.molybdenum,
+        'chromium': report.chromium,
+        'fluorine': report.fluorine,
+        'histidine': report.histidine,
+        'isoleucine': report.isoleucine,
+        'leucine': report.leucine,
+        'lysine': report.lysine,
+        'methionine': report.methionine,
+        'phenylalanine': report.phenylalanine,
+        'threonine': report.threonine,
+        'tryptophan': report.tryptophan,
+        'valine': report.valine,
+      };
+      await prefs.setString('nutrition_report_$dateKey', jsonEncode(json));
+    }
   }
 
-  // Método 1: Cargar historial de una fecha específica
   Future<void> _loadHistoryForDate(DateTime date) async {
-    final entries = await DatabaseService.instance.getEntriesByDate(date);
+    // Usar la misma validación que _nextDay (que funciona bien)
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final dateNormalized = DateTime(date.year, date.month, date.day);
 
-    setState(() {
-      _selectedDate = date;
-      _history = entries;
-    });
+    // Solo permitir si la fecha es hoy o anterior
+    if (dateNormalized.isBefore(today) ||
+        dateNormalized.isAtSameMomentAs(today)) {
+      final entries = await StorageFactory.instance.getEntriesByDate(date);
 
-    await _recalculateTotals();
+      setState(() {
+        _selectedDate = date;
+        _history = entries;
+      });
+
+      await _recalculateTotals();
+    }
   }
 
-  // Método 3: Mostrar el modal del reporte (reutilizable)
+  // 🔧 REEMPLAZA tu función _getReportsForDateRange en home_page.dart con esta:
+
+  Future<List<Map<String, dynamic>>> _getReportsForDateRange(
+    DateTime start,
+    DateTime end,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final results = <Map<String, dynamic>>[];
+
+    DateTime current = start;
+    while (current.isBefore(end.add(const Duration(days: 1)))) {
+      final key =
+          'nutrition_report_${DateFormat('yyyy-MM-dd').format(current)}';
+      final jsonStr = prefs.getString(key);
+
+      NutritionReport? report;
+
+      if (jsonStr != null) {
+        // ✅ Existe en cache - usar directamente
+        try {
+          report = NutritionReport.fromJson(jsonDecode(jsonStr));
+          print('✅ Cache hit: $key');
+        } catch (e) {
+          print('❌ Error al parsear cache de $key: $e');
+        }
+      } else {
+        // ⚠️ No existe en cache - calcular en tiempo real
+        print('⚠️ Cache miss: $key - calculando desde DB...');
+
+        final entries = await StorageFactory.instance.getEntriesByDate(current);
+
+        if (entries.isNotEmpty) {
+          report = await _calculator.calculateDailyTotals(entries);
+
+          // 💾 Guardar en cache para la próxima vez
+          final json = {
+            'calories': report.calories,
+            'proteins': report.proteins,
+            'carbohydrates': report.carbohydrates,
+            'totalFats': report.totalFats,
+            'fiber': report.fiber,
+            'omega3': report.omega3,
+            'omega6': report.omega6,
+            'calcium': report.calcium,
+            'iron': report.iron,
+            'magnesium': report.magnesium,
+            'phosphorus': report.phosphorus,
+            'potassium': report.potassium,
+            'sodium': report.sodium,
+            'zinc': report.zinc,
+            'copper': report.copper,
+            'manganese': report.manganese,
+            'selenium': report.selenium,
+            'vitaminA': report.vitaminA,
+            'vitaminC': report.vitaminC,
+            'vitaminE': report.vitaminE,
+            'vitaminK': report.vitaminK,
+            'vitaminB1': report.vitaminB1,
+            'vitaminB2': report.vitaminB2,
+            'vitaminB3': report.vitaminB3,
+            'vitaminB4': report.vitaminB4,
+            'vitaminB5': report.vitaminB5,
+            'vitaminB6': report.vitaminB6,
+            'vitaminB7': report.vitaminB7,
+            'vitaminB9': report.vitaminB9,
+            'vitaminB12': report.vitaminB12,
+            'vitaminD': report.vitaminD,
+            'iodine': report.iodine,
+            'molybdenum': report.molybdenum,
+            'chromium': report.chromium,
+            'fluorine': report.fluorine,
+            'histidine': report.histidine,
+            'isoleucine': report.isoleucine,
+            'leucine': report.leucine,
+            'lysine': report.lysine,
+            'methionine': report.methionine,
+            'phenylalanine': report.phenylalanine,
+            'threonine': report.threonine,
+            'tryptophan': report.tryptophan,
+            'valine': report.valine,
+          };
+
+          await prefs.setString(key, jsonEncode(json));
+          print(
+            '💾 Calculado y guardado en cache: $key (${entries.length} entries)',
+          );
+        } else {
+          print('⚠️ Sin datos para: $key');
+        }
+      }
+
+      if (report != null) {
+        results.add({'date': current, 'report': report});
+      }
+
+      current = current.add(const Duration(days: 1));
+    }
+
+    print(
+      '📊 Total reportes encontrados: ${results.length} de ${end.difference(start).inDays + 1} días solicitados',
+    );
+    return results;
+  }
+
   Future<void> _showNutritionReport() async {
     if (_currentReport == null) return;
+
+    // Asegurar que tenemos los datos correctos antes de abrir el modal
+    await _recalculateTotals();
 
     await showModalBottomSheet(
       context: context,
@@ -1122,23 +1242,23 @@ class _HomePageState extends State<HomePage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setModalState) {
           final totalCaloriesGoal =
-              widget.profile?.goalCalories?.toDouble() ??
+              widget.profile.goalCalories?.toDouble() ??
               CalorieCalculator.calculateRecommendedCalories(
-                dob: widget.profile?.dob ?? DateTime(1990),
-                gender: widget.profile?.gender ?? 'male',
-                weight: widget.profile?.weight ?? 70.0,
-                height: widget.profile?.height ?? 170.0,
-                lifestyle: widget.profile?.lifestyle ?? '2',
-                exerciseLevel: widget.profile?.exerciseLevel ?? '2',
-                expenditure: widget.profile?.expenditure,
+                dob: widget.profile.dob ?? DateTime(1990),
+                gender: widget.profile.gender ?? 'male',
+                weight: widget.profile.weight ?? 70.0,
+                height: widget.profile.height ?? 170.0,
+                lifestyle: widget.profile.lifestyle ?? '2',
+                exerciseLevel: widget.profile.exerciseLevel ?? '2',
+                expenditure: widget.profile.expenditure,
               );
 
           final proteinGoalGrams =
-              (totalCaloriesGoal * (widget.profile?.protein ?? 20) / 100) / 4;
+              (totalCaloriesGoal * ((widget.profile.protein ?? 20) / 100)) / 4;
           final carbsGoalGrams =
-              (totalCaloriesGoal * (widget.profile?.carbs ?? 65) / 100) / 4;
+              (totalCaloriesGoal * ((widget.profile.carbs ?? 65) / 100)) / 4;
           final fatGoalGrams =
-              (totalCaloriesGoal * (widget.profile?.fat ?? 15) / 100) / 9;
+              (totalCaloriesGoal * ((widget.profile.fat ?? 15) / 100)) / 9;
 
           return NutritionReportSheet(
             report: _currentReport!,
@@ -1146,23 +1266,23 @@ class _HomePageState extends State<HomePage> {
             proteinGoalGrams: proteinGoalGrams,
             carbsGoalGrams: carbsGoalGrams,
             fatGoalGrams: fatGoalGrams,
-            userWeight: widget.profile?.weight ?? 70.0,
+            userWeight: widget.profile.weight ?? 70.0,
             selectedDate: _selectedDate,
             onDateChanged: (newDate) async {
               await _loadHistoryForDate(newDate);
               if (mounted) {
-                setModalState(() {}); // Actualiza el modal sin cerrarlo
+                setModalState(() {});
               }
             },
+            getReportsForRange: _getReportsForDateRange,
           );
         },
       ),
     );
-    await _loadHistory();
+    // Ya no necesitamos recargar aquí porque _loadHistoryForDate ya lo hace
   }
 
   Future<void> _openFoodBottomSheet(Food food) async {
-    _searchFocusNode.unfocus();
     final grams = await showModalBottomSheet<double?>(
       context: context,
       builder: (ctx) => FoodAmountSheet(
@@ -1175,19 +1295,21 @@ class _HomePageState extends State<HomePage> {
       ),
     );
 
+    // Cerrar teclado DESPUÉS de cerrar el modal
+    _searchFocusNode.unfocus();
+
     if (grams != null && grams > 0) {
       final fullFood = _foodRepo.getFoodById(food.id!);
       if (fullFood != null) {
-        // Agregar a la lista temporal
         _pendingIngredients.add(
-          RecipeIngredient(
-            recipeId: 0, // Temporal, se asigna al guardar
-            food: fullFood,
-            grams: grams,
-          ),
+          RecipeIngredient(recipeId: 0, food: fullFood, grams: grams),
         );
 
-        // Mostrar confirmación con opciones
+        setState(() {
+          _searchQuery = "";
+          _searchController.clear();
+        });
+
         if (!mounted) return;
 
         final action = await showDialog<String>(
@@ -1239,13 +1361,11 @@ class _HomePageState extends State<HomePage> {
         );
 
         if (action == 'add_more') {
-          // Volver a abrir la lista de alimentos para agregar otro
           setState(() {
             _isBuildingMultiple = true;
+            _tareWeight = _weight;
           });
-          // No hacer nada más, el usuario volverá a seleccionar otro alimento
         } else if (action == 'finish') {
-          // Registrar todos los ingredientes
           await _finishAddingIngredients();
         }
       }
@@ -1255,7 +1375,6 @@ class _HomePageState extends State<HomePage> {
   Future<void> _finishAddingIngredients() async {
     if (_pendingIngredients.isEmpty) return;
 
-    // Si hay más de un ingrediente, preguntar si guardar como receta
     if (_pendingIngredients.length > 1 && mounted) {
       final saveAsRecipe = await showDialog<bool>(
         context: context,
@@ -1298,24 +1417,25 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    // Registrar todos los ingredientes en el historial
     for (final ingredient in _pendingIngredients) {
       final newEntry = FoodEntry(
         food: ingredient.food,
         grams: ingredient.grams,
       );
-      await DatabaseService.instance.createEntry(newEntry);
-      await DatabaseService.instance.incrementFoodUsage(ingredient.food.id!);
+      await StorageFactory.instance.createEntry(newEntry);
+      await StorageFactory.instance.incrementFoodUsage(ingredient.food.id!);
     }
 
-    // Limpiar la lista temporal
     setState(() {
       _pendingIngredients.clear();
       _isBuildingMultiple = false;
     });
 
     _setTare();
-    _loadHistory();
+    print('🔄 Recargando historial...');
+    await _loadHistory();
+    print('✅ Historial recargado. Entries: ${_history.length}');
+    setState(() {});
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1328,6 +1448,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _saveAsRecipe() async {
+    // Colapsar historial/macros primero (igual que al buscar)
+    setState(() {
+      _showBottomContent = false;
+    });
+
+    // Pequeña pausa para que se complete la animación
+    await Future.delayed(const Duration(milliseconds: 150));
+
     final nameController = TextEditingController();
 
     final recipeName = await showDialog<String>(
@@ -1359,6 +1487,13 @@ class _HomePageState extends State<HomePage> {
       ),
     );
 
+    // Restaurar historial/macros después de cerrar el diálogo
+    if (mounted) {
+      setState(() {
+        _showBottomContent = true;
+      });
+    }
+
     if (recipeName != null && recipeName.isNotEmpty) {
       final recipe = Recipe(
         name: recipeName,
@@ -1366,7 +1501,7 @@ class _HomePageState extends State<HomePage> {
         createdAt: DateTime.now(),
       );
 
-      await DatabaseService.instance.saveRecipe(recipe, _pendingIngredients);
+      await StorageFactory.instance.saveRecipe(recipe, _pendingIngredients);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1379,24 +1514,44 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // ✅ DIÁLOGO CON SCROLL (mejora de v3)
   Future<void> _showVariantDialog(FoodGroupDisplay group) async {
     final selected = await showDialog<Food>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Elige tipo de ${group.groupName}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: group.items
-              .map(
-                (food) => ListTile(
-                  title: Text(food.name),
-                  onTap: () => Navigator.pop(ctx, food),
-                ),
-              )
-              .toList(),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+            minHeight: 0,
+          ),
+          child: IntrinsicHeight(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: group.items
+                    .map(
+                      (food) => ListTile(
+                        title: Text(food.name),
+                        onTap: () => Navigator.pop(ctx, food),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+        ],
       ),
     );
+
+    // Cerrar teclado DESPUÉS de cerrar el diálogo
+    _searchFocusNode.unfocus();
 
     if (selected != null) {
       _openFoodBottomSheet(selected);
@@ -1405,34 +1560,25 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Obtenemos la lista completa de alimentos desde el repositorio.
     final allFoods = _foodRepo.getAllFoods();
 
-    // 2. Definimos la lista que se mostrará en pantalla.
     List<dynamic> displayItems;
 
     if (_searchQuery.isEmpty) {
-      // 3. SI NO HAY BÚSQUEDA: mostramos los grupos predefinidos.
       displayItems = _displayGroups;
     } else {
-      // 4. Mapa de nutrientes para filtrado
       final nutrientMap = {
-        // Macronutrientes
         'proteina': (Food f) => f.proteins,
         'proteínas': (Food f) => f.proteins,
         'carbohidratos': (Food f) => f.carbohydrates,
         'fibra': (Food f) => f.fiber,
         'grasas': (Food f) => f.totalFats,
-
-        // Ácidos grasos
         'omega3': (Food f) => f.omega3,
         'omega-3': (Food f) => f.omega3,
         'omega6': (Food f) => f.omega6,
         'omega-6': (Food f) => f.omega6,
         'omega9': (Food f) => f.omega9,
         'omega-9': (Food f) => f.omega9,
-
-        // Vitaminas
         'vitamina a': (Food f) => f.vitaminA,
         'vitamina c': (Food f) => f.vitaminC,
         'vitamina d': (Food f) => f.vitaminD,
@@ -1462,8 +1608,6 @@ class _HomePageState extends State<HomePage> {
         'folato': (Food f) => f.vitaminB9,
         'vitamina b12': (Food f) => f.vitaminB12,
         'b12': (Food f) => f.vitaminB12,
-
-        // Minerales
         'calcio': (Food f) => f.calcium,
         'hierro': (Food f) => f.iron,
         'magnesio': (Food f) => f.magnesium,
@@ -1476,8 +1620,10 @@ class _HomePageState extends State<HomePage> {
         'manganeso': (Food f) => f.manganese,
         'selenio': (Food f) => f.selenium,
         'yodo': (Food f) => f.iodine,
-
-        // Aminoácidos
+        'molibdeno': (Food f) => f.molybdenum,
+        'cromo': (Food f) => f.chromium,
+        'fluor': (Food f) => f.fluorine,
+        'flúor': (Food f) => f.fluorine,
         'histidina': (Food f) => f.histidine,
         'isoleucina': (Food f) => f.isoleucine,
         'leucina': (Food f) => f.leucine,
@@ -1488,41 +1634,59 @@ class _HomePageState extends State<HomePage> {
         'triptofano': (Food f) => f.tryptophan,
         'triptófano': (Food f) => f.tryptophan,
         'valina': (Food f) => f.valine,
+        // Aminoácidos no esenciales
+        'alanina': (Food f) => f.alanine,
+        'arginina': (Food f) => f.arginine,
+        'acido aspartico': (Food f) => f.asparticAcid,
+        'ácido aspártico': (Food f) => f.asparticAcid,
+        'aspartico': (Food f) => f.asparticAcid,
+        'aspártico': (Food f) => f.asparticAcid,
+        'acido glutamico': (Food f) => f.glutamicAcid,
+        'ácido glutámico': (Food f) => f.glutamicAcid,
+        'glutamico': (Food f) => f.glutamicAcid,
+        'glutámico': (Food f) => f.glutamicAcid,
+        'glicina': (Food f) => f.glycine,
+        'prolina': (Food f) => f.proline,
+        'serina': (Food f) => f.serine,
+        'tirosina': (Food f) => f.tyrosine,
+        'cisteina': (Food f) => f.cysteine,
+        'cisteína': (Food f) => f.cysteine,
+        'glutamina': (Food f) => f.glutamine,
+        'asparagina': (Food f) => f.asparagine,
       };
 
       final query = _searchQuery.toLowerCase().trim();
+      final normalizedQuery = _normalizeString(query);
 
-      // Verificar si la búsqueda coincide con un nutriente
-      if (nutrientMap.containsKey(query)) {
-        // Ordenar por contenido del nutriente
-        final nutrientGetter = nutrientMap[query]!;
+      if (nutrientMap.containsKey(normalizedQuery)) {
+        final nutrientGetter = nutrientMap[normalizedQuery]!;
         displayItems = allFoods.toList()
           ..sort((a, b) => nutrientGetter(b).compareTo(nutrientGetter(a)));
       } else {
-        // Búsqueda normal por nombre
         displayItems = allFoods.where((food) {
-          return food.name.toLowerCase().contains(query) ||
-              (food.fullName?.toLowerCase().contains(query) ?? false);
+          final normalizedName = _normalizeString(food.name);
+          final normalizedFullName = food.fullName != null
+              ? _normalizeString(food.fullName!)
+              : '';
+
+          return normalizedName.contains(normalizedQuery) ||
+              normalizedFullName.contains(normalizedQuery);
         }).toList();
       }
     }
-    // --- LÓGICA DE CÁLCULO DE METAS ---
-    // (La ponemos aquí mismo para tener todo a mano)
 
-    // 1. Calorías objetivo calculadas según el perfil
     final double totalCaloriesGoal =
         widget.profile.goalCalories?.toDouble() ??
         CalorieCalculator.calculateRecommendedCalories(
-          dob: widget.profile.dob,
-          gender: widget.profile.gender,
-          weight: widget.profile.weight,
-          height: widget.profile.height,
-          lifestyle: widget.profile.lifestyle,
-          exerciseLevel: widget.profile.exerciseLevel,
+          dob: widget.profile.dob ?? DateTime(1990),
+          gender: widget.profile.gender ?? 'male',
+          weight: widget.profile.weight ?? 70.0,
+          height: widget.profile.height ?? 170.0,
+          lifestyle: widget.profile.lifestyle ?? '2',
+          exerciseLevel: widget.profile.exerciseLevel ?? '2',
           expenditure: widget.profile.expenditure,
         );
 
-    // 2. Calculamos los gramos objetivo para cada macro
     final double proteinGoalGrams =
         (totalCaloriesGoal * ((widget.profile.protein ?? 30) / 100)) / 4;
     final double carbsGoalGrams =
@@ -1530,9 +1694,6 @@ class _HomePageState extends State<HomePage> {
     final double fatGoalGrams =
         (totalCaloriesGoal * ((widget.profile.fat ?? 20) / 100)) / 9;
 
-    // 3. Calculamos el porcentaje de progreso (0.0 a 1.0)
-    // Añadimos una comprobación para evitar dividir por cero si la meta es 0
-    // REEMPLAZA CON:
     final double proteinPercentage =
         _currentReport != null && proteinGoalGrams > 0
         ? _currentReport!.proteins / proteinGoalGrams
@@ -1543,12 +1704,13 @@ class _HomePageState extends State<HomePage> {
     final double fatPercentage = _currentReport != null && fatGoalGrams > 0
         ? _currentReport!.totalFats / fatGoalGrams
         : 0.0;
+
     return GestureDetector(
       onTap: () {
         if (_searchFocusNode.hasFocus) {
           _searchFocusNode.unfocus();
         }
-      }, // Solo grupos con resultados
+      },
       child: Scaffold(
         appBar: AppBar(
           title: InkWell(
@@ -1568,13 +1730,25 @@ class _HomePageState extends State<HomePage> {
           ),
           actions: [
             IconButton(
+              icon: Icon(
+                _isTodayFasting ? Icons.no_meals : Icons.restaurant,
+                color: _isTodayFasting ? Colors.orange : null,
+              ),
+              onPressed: _toggleFastingDay,
+              tooltip: _isTodayFasting
+                  ? 'Desmarcar día de ayuno'
+                  : 'Marcar día de ayuno',
+            ),
+            IconButton(
               icon: const Icon(Icons.task_alt),
               onPressed: () {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (context) =>
-                      HabitsModal(onSettingsTap: _showHabitsSettings),
+                  builder: (context) => SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.35,
+                    child: HabitsModal(onSettingsTap: _showHabitsSettings),
+                  ),
                 );
               },
             ),
@@ -1595,39 +1769,41 @@ class _HomePageState extends State<HomePage> {
         ),
         drawer: SettingsDrawer(
           profile: widget.profile,
-          onProfileUpdated: (newProfile) {
-            // 👈 AGREGA ESTO
-            widget.onUpdateProfile(newProfile);
-            setState(() {}); // Fuerza rebuild para actualizar la UI
+          searchController: _searchController,
+          onClearSearch: () {
+            setState(() {
+              _searchQuery = "";
+            });
           },
-          onHistoryChanged: () {
-            _loadHistory(); // Recarga el historial
+          onProfileUpdated: (newProfile) {
+            widget.onUpdateProfile(newProfile);
+            setState(() {});
+          },
+          onHistoryChanged: () async {
+            await _loadHistory();
           },
           onOpenImportExport: _showInOutModal,
-          onRecipeUsed: () {
-            _loadHistory();
+          onRecipeUsed: () async {
+            await _loadHistory();
             _setTare();
           },
           onSortOrderChanged: (newOrder) async {
             setState(() => _sortOrder = newOrder);
-            final counts = await DatabaseService.instance.getFoodUsageCounts();
+            final counts = await StorageFactory.instance.getFoodUsageCounts();
             setState(() => _foodUsageCounts = counts);
             _buildDisplayGroups();
           },
           onRemindersChanged: () {
-            // Agregar esto
             _loadDailyReminders();
           },
         ),
         body: Column(
           children: [
-            // Panel de balanza colapsable
             _buildReminderBanner(),
             Card(
-              margin: const EdgeInsets.fromLTRB(16, 4, 16, 8), // Ya lo tienes
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
               child: Column(
                 children: [
-                  // Header siempre visible - COMPACTAR ESTO
                   InkWell(
                     onTap: () =>
                         setState(() => _scaleExpanded = !_scaleExpanded),
@@ -1635,14 +1811,14 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
                         vertical: 8,
-                      ), // Reducir de 16 a 12/8
+                      ),
                       child: Row(
                         children: [
                           if (!_isScaleConnected)
                             const Text(
                               'Balanza',
                               style: TextStyle(
-                                fontSize: 14, // Reducir de 16 a 14
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1657,13 +1833,12 @@ class _HomePageState extends State<HomePage> {
                                 _isScaleConnected = isConnected;
                                 if (!isConnected) {
                                   _weight = 0.0;
-                                  _tareWeight = 0.0; // También resetea la tara
+                                  _tareWeight = 0.0;
                                   _weightController.add(0.0);
                                 }
                               });
                             },
                           ),
-                          // Botones más compactos
                           if (_tareWeight == 0)
                             OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
@@ -1707,11 +1882,10 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  // Contenido expandible
                   if (_scaleExpanded) ...[
                     const Divider(height: 1),
                     Padding(
-                      padding: const EdgeInsets.all(12), // Reducir de 16 a 12
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         children: [
                           if (_tareWeight != 0)
@@ -1725,7 +1899,7 @@ class _HomePageState extends State<HomePage> {
                           Text(
                             "${_netWeight.toStringAsFixed(1)} g",
                             style: TextStyle(
-                              fontSize: 40, // Reducir de 48 a 40
+                              fontSize: 40,
                               fontWeight: FontWeight.bold,
                               color: _tareWeight > 0 ? Colors.green : null,
                             ),
@@ -1738,67 +1912,97 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // Grid de alimentos
             Expanded(
               child: _isListView
                   ? ListView.builder(
-                      itemCount: _displayGroups.length,
+                      itemCount: displayItems.length + supplementsList.length,
                       itemBuilder: (context, index) {
-                        final group = _displayGroups[index];
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header de categoría
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                              child: Text(
-                                '${group.emoji} ${group.groupName}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                        // Handle supplements at the end
+                        if (index >= displayItems.length) {
+                          final supplement =
+                              supplementsList[index - displayItems.length];
+                          return ListTile(
+                            dense: true,
+                            leading: Text(
+                              supplement.emoji,
+                              style: const TextStyle(fontSize: 24),
+                            ),
+                            title: Text(supplement.name),
+                            subtitle: const Text('Suplemento'),
+                            onTap: () => _openSupplementSheet(supplement),
+                          );
+                        }
+
+                        final item = displayItems[index];
+
+                        // Handle FoodGroupDisplay (when no search)
+                        if (item is FoodGroupDisplay) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                child: Text(
+                                  '${item.emoji} ${item.groupName}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                            // Lista compacta de alimentos
-                            ...group.items.map(
-                              (food) => ListTile(
-                                dense: true,
-                                leading: Text(
-                                  food.emoji,
-                                  style: const TextStyle(fontSize: 24),
+                              ...item.items.map(
+                                (food) => ListTile(
+                                  dense: true,
+                                  leading: Text(
+                                    food.emoji,
+                                    style: const TextStyle(fontSize: 24),
+                                  ),
+                                  title: Text(food.name),
+                                  subtitle: Text('${food.calories} kcal/100g'),
+                                  trailing: Text(
+                                    '${food.proteins.toStringAsFixed(1)}P • ${food.carbohydrates.toStringAsFixed(1)}C • ${food.totalFats.toStringAsFixed(1)}G',
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                  onTap: () => _openFoodBottomSheet(food),
                                 ),
-                                title: Text(food.name),
-                                subtitle: Text('${food.calories} kcal/100g'),
-                                trailing: Text(
-                                  '${food.proteins.toStringAsFixed(1)}P • ${food.carbohydrates.toStringAsFixed(1)}C • ${food.totalFats.toStringAsFixed(1)}G',
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                onTap: () => _openFoodBottomSheet(food),
                               ),
+                            ],
+                          );
+                        }
+                        // Handle individual Food (when searching)
+                        else if (item is Food) {
+                          return ListTile(
+                            dense: true,
+                            leading: Text(
+                              item.emoji,
+                              style: const TextStyle(fontSize: 24),
                             ),
-                          ],
-                        );
+                            title: Text(item.name),
+                            subtitle: Text('${item.calories} kcal/100g'),
+                            trailing: Text(
+                              '${item.proteins.toStringAsFixed(1)}P • ${item.carbohydrates.toStringAsFixed(1)}C • ${item.totalFats.toStringAsFixed(1)}G',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            onTap: () => _openFoodBottomSheet(item),
+                          );
+                        }
+
+                        return const SizedBox.shrink();
                       },
                     )
                   : GridView.builder(
                       padding: const EdgeInsets.all(16),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: _getCrossAxisCount(
-                          context,
-                        ), // 👈 CAMBIAR AQUÍ
+                        crossAxisCount: _getCrossAxisCount(context),
                         crossAxisSpacing: 6,
                         mainAxisSpacing: 6,
                       ),
-
-                      // 5. ¡AQUÍ USAMOS LA VARIABLE!
                       itemCount: displayItems.length + supplementsList.length,
                       itemBuilder: (context, index) {
                         if (index < displayItems.length) {
                           final item = displayItems[index];
 
-                          // 6. RENDERIZADO INTELIGENTE
                           if (item is FoodGroupDisplay) {
-                            // Si el item es un Grupo, lo mostramos como grupo
                             return InkWell(
                               onTap: () {
                                 if (item.hasMultiple) {
@@ -1831,7 +2035,6 @@ class _HomePageState extends State<HomePage> {
                               ),
                             );
                           } else if (item is Food) {
-                            // Si el item es un Alimento (de la búsqueda), lo mostramos individualmente
                             return InkWell(
                               onTap: () => _openFoodBottomSheet(item),
                               child: Card(
@@ -1859,9 +2062,7 @@ class _HomePageState extends State<HomePage> {
                             );
                           }
                           return const SizedBox.shrink();
-                        } // Cierra el if (index < displayItems.length)
-                        else {
-                          // Es un suplemento
+                        } else {
                           final supplement =
                               supplementsList[index - displayItems.length];
                           return GestureDetector(
@@ -1889,18 +2090,16 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                           );
-                        } // Fallback por si acaso
+                        }
                       },
                     ),
             ),
 
-            if (!_isSearchFocused)
-              // Historial colapsable
+            // ✅ HISTORIAL CON EXPANSIONTILE (estructura de v1)
+            if (_showBottomContent)
               Column(
                 children: [
-                  // ¡AQUÍ VA EL NUEVO WIDGET DE TOTALES!
                   if (_currentReport != null)
-                    // AHORA CONSTRUIMOS EL WIDGET CON LOS DATOS REALES
                     Card(
                       margin: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -1914,25 +2113,16 @@ class _HomePageState extends State<HomePage> {
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           children: [
-                            // --- NUEVO HEADER CON BOTÓN ---
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // Título con calorías
-                                RichText(
-                                  text: TextSpan(
-                                    style: const TextStyle(fontSize: 16),
-                                    children: [
-                                      const TextSpan(text: "🔥 "),
-                                      TextSpan(
-                                        text:
-                                            "${_currentReport!.calories.toStringAsFixed(0)} / ${totalCaloriesGoal.toStringAsFixed(0)} kcal",
-                                        style: const TextStyle(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                                // ✅ SIN SUBRAYADO - Texto simple
+                                Text(
+                                  '🔥 ${_currentReport!.calories.toStringAsFixed(0)} / ${totalCaloriesGoal.toStringAsFixed(0)} kcal',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 Row(
@@ -1943,22 +2133,17 @@ class _HomePageState extends State<HomePage> {
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 12,
                                           vertical: 8,
-                                        ), // Más compacto
-                                        minimumSize: const Size(
-                                          0,
-                                          0,
-                                        ), // Sin tamaño mínimo
-                                        tapTargetSize: MaterialTapTargetSize
-                                            .shrinkWrap, // Reduce el área táctil
+                                        ),
+                                        minimumSize: const Size(0, 0),
+                                        tapTargetSize:
+                                            MaterialTapTargetSize.shrinkWrap,
                                       ),
                                       onPressed: () async {
                                         if (_currentReport != null) {
                                           final originalDate = _selectedDate;
                                           await _showNutritionReport();
 
-                                          // Cuando el modal se cierre, verificar si cambió la fecha
                                           if (_selectedDate != originalDate) {
-                                            // La fecha cambió dentro del modal, recargar vista
                                             await _loadHistory();
                                           }
                                         }
@@ -1990,8 +2175,6 @@ class _HomePageState extends State<HomePage> {
                               ],
                             ),
                             const SizedBox(height: 16),
-
-                            // --- CÍRCULOS DE PROGRESO ---
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
@@ -2004,39 +2187,33 @@ class _HomePageState extends State<HomePage> {
                                 MacroProgressCircle(
                                   title: "Carbs",
                                   emoji: "🍞",
-                                  percentage:
-                                      carbsPercentage, // Aún con valor fijo
+                                  percentage: carbsPercentage,
                                   progressColor: Colors.orange,
                                 ),
                                 MacroProgressCircle(
                                   title: "Grasas",
                                   emoji: "🥑",
-                                  percentage:
-                                      fatPercentage, // Aún con valor fijo
+                                  percentage: fatPercentage,
                                   progressColor: Colors.yellow.shade700,
                                 ),
                               ],
                             ),
-
-                            // Ya no tenemos las filas de texto aquí abajo.
                           ],
                         ),
                       ),
                     ),
+
+                  // ✅ EXPANSIONTILE (como en v1)
                   ExpansionTile(
                     key: ValueKey('history_${_selectedDate.toIso8601String()}'),
                     initiallyExpanded: false,
                     tilePadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 0,
-                    ), // Sin padding vertical
-                    dense: true, // Hace el tile más compacto
-                    visualDensity:
-                        VisualDensity.compact, // Reduce aún más la altura
-                    leading: const Icon(
-                      Icons.history,
-                      size: 18,
-                    ), // Icono más pequeño
+                    ),
+                    dense: true,
+                    visualDensity: VisualDensity.compact,
+                    leading: const Icon(Icons.history, size: 18),
                     title: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -2050,9 +2227,7 @@ class _HomePageState extends State<HomePage> {
                         Expanded(
                           child: Text(
                             '${_getDateLabel()} (${_history.length} registros)',
-                            style: const TextStyle(
-                              fontSize: 13,
-                            ), // Texto más pequeño
+                            style: const TextStyle(fontSize: 13),
                           ),
                         ),
                         IconButton(
@@ -2081,28 +2256,26 @@ class _HomePageState extends State<HomePage> {
                               ),
                               title: Text(
                                 entry.isSupplement
-                                    ? "${entry.food.name} - ${entry.supplementDose}" // 👈 Para suplementos: mostrar dosis
-                                    : "${entry.food.fullName} - ${entry.grams.toStringAsFixed(1)} g", // Para alimentos: gramos
+                                    ? "${entry.food.name} - ${entry.supplementDose}"
+                                    : "${entry.food.fullName} - ${entry.grams.toStringAsFixed(1)} g",
                               ),
                               subtitle: Text(
                                 entry.isSupplement
-                                    ? "Suplemento" // 👈 Para suplementos: texto simple
-                                    : "${(entry.food.calories * entry.grams / 100).toStringAsFixed(0)} kcal", // Para alimentos: calorías
+                                    ? "Suplemento"
+                                    : "${(entry.food.calories * entry.grams / 100).toStringAsFixed(0)} kcal",
                               ),
                               trailing: PopupMenuButton<String>(
                                 icon: const Icon(Icons.more_vert),
                                 onSelected: (value) async {
                                   switch (value) {
                                     case 'info':
-                                      _showNutritionInfo(
-                                        entry,
-                                      ); // 👈 Nueva función
+                                      _showNutritionInfo(entry);
                                       break;
                                     case 'edit':
-                                      _editEntry(entry); // 👈 Nueva función
+                                      _editEntry(entry);
                                       break;
                                     case 'delete':
-                                      _deleteEntry(entry); // 👈 Nueva función
+                                      _deleteEntry(entry);
                                       break;
                                   }
                                 },
@@ -2151,7 +2324,6 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
 
-            // Buscador
             Container(
               margin: const EdgeInsets.all(12),
               padding: EdgeInsets.all(_isSearchFocused ? 12 : 8),
@@ -2166,6 +2338,7 @@ class _HomePageState extends State<HomePage> {
                   });
                 },
                 child: TextField(
+                  controller: _searchController,
                   focusNode: _searchFocusNode,
                   textCapitalization: TextCapitalization.characters,
                   textAlign: TextAlign.left,
@@ -2204,17 +2377,14 @@ class _HomePageState extends State<HomePage> {
   int _getCrossAxisCount(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
 
-    // Tablet 2K en portrait (ancho > 768px)
     if (width >= 768) {
-      return 5; // 5 columnas para tablets
+      return 5;
     }
 
-    // Tablet mediana (ancho entre 600-768px)
     if (width >= 600) {
-      return 4; // 4 columnas para tablets medianas
+      return 4;
     }
 
-    // Mobile (ancho < 600px)
-    return 3; // 3 columnas para móviles
+    return 3;
   }
 }

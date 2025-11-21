@@ -1,0 +1,214 @@
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import '../models/dashboard_preferences.dart';
+
+class DashboardSettingsScreen extends StatefulWidget {
+  final DashboardPreferences currentPreferences;
+
+  const DashboardSettingsScreen({
+    super.key,
+    required this.currentPreferences,
+  });
+
+  @override
+  State<DashboardSettingsScreen> createState() =>
+      _DashboardSettingsScreenState();
+}
+
+class _DashboardSettingsScreenState extends State<DashboardSettingsScreen> {
+  late DashboardPreferences _preferences;
+
+  @override
+  void initState() {
+    super.initState();
+    _preferences = widget.currentPreferences;
+  }
+
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'dashboard_preferences',
+      jsonEncode(_preferences.toJson()),
+    );
+    if (mounted) {
+      Navigator.pop(context, _preferences);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Ajustes del Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check),
+            tooltip: 'Guardar',
+            onPressed: _savePreferences,
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Secci贸n: Mostrar en Dashboard
+          const Text(
+            'Mostrar en Dashboard',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('Promedio Diario'),
+                  subtitle: const Text('Tarjeta con calor韆s y macronutrientes'),
+                  value: _preferences.showMacrosCard,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(showMacrosCard: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Gr醘ico de Tendencias'),
+                  subtitle: const Text('Gr醘ico de l韓ea con calor韆s/macros'),
+                  value: _preferences.showCaloriesChart,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(showCaloriesChart: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Distribuci髇 de Macronutrientes'),
+                  subtitle: const Text('Gr醘ico de distribuci髇 porcentual'),
+                  value: _preferences.showMacrosPercentChart,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(showMacrosPercentChart: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Top 5 Alimentos'),
+                  subtitle: const Text('Alimentos m醩 consumidos'),
+                  value: _preferences.showTopFoods,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(showTopFoods: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('H醔itos Completados'),
+                  subtitle: const Text('Estad韘ticas de h醔itos'),
+                  value: _preferences.showHabitsCompletion,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(showHabitsCompletion: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('An醠isis de Nutrientes'),
+                  subtitle: const Text('Evoluci髇 y cumplimiento de RDA/AI'),
+                  value: _preferences.showNutrientsAnalysis,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(showNutrientsAnalysis: value);
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Secci贸n: Incluir en PDF
+          const Text(
+            'Incluir en Exportaci贸n PDF',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('Promedio Diario'),
+                  subtitle: const Text('Resumen de calor韆s y macronutrientes'),
+                  value: _preferences.exportMacrosCard,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(exportMacrosCard: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Distribuci髇 Porcentual Macros'),
+                  subtitle: const Text('Gr醘ico de distribuci髇 porcentual'),
+                  value: _preferences.exportMacrosPercentChart,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(exportMacrosPercentChart: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Datos Diarios'),
+                  subtitle: const Text('Tabla con datos d韆 por d韆'),
+                  value: _preferences.exportDailyData,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(exportDailyData: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Top 5 Alimentos'),
+                  subtitle: const Text('Lista de alimentos m醩 consumidos'),
+                  value: _preferences.exportTopFoods,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(exportTopFoods: value);
+                    });
+                  },
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('H醔itos Completados'),
+                  subtitle: const Text('Estad韘ticas de cumplimiento de h醔itos'),
+                  value: _preferences.exportHabitsCompletion,
+                  onChanged: (value) {
+                    setState(() {
+                      _preferences = _preferences.copyWith(exportHabitsCompletion: value);
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Bot贸n de restaurar valores predeterminados
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                _preferences = const DashboardPreferences();
+              });
+            },
+            icon: const Icon(Icons.restore),
+            label: const Text('Restaurar valores predeterminados'),
+          ),
+        ],
+      ),
+    );
+  }
+}

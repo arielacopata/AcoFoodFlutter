@@ -2,7 +2,8 @@
 import 'food.dart';
 
 class FoodEntry {
-  final int? id; // <-- AÑADE ESTO
+  final int? id; // Mantener para SQLite
+  final String? firestoreDocId; // Nuevo campo para Firestore
   final Food food;
   final double grams;
   final DateTime timestamp;
@@ -11,6 +12,7 @@ class FoodEntry {
 
   FoodEntry({
     this.id, // <-- AÑADE ESTO
+    this.firestoreDocId, // 👈 Agregar
     required this.food,
     required this.grams,
     DateTime? timestamp,
